@@ -11,6 +11,33 @@ export function createInfoPanel(): HTMLElement {
   const panel = document.createElement('div');
   panel.id = 'info-panel';
   panel.dataset.testid = 'info-panel';
+
+  // Scroll-fade gradient at bottom — works on iOS where custom scrollbars don't
+  const fade = document.createElement('div');
+  fade.style.cssText = `
+    position: sticky;
+    bottom: -24px;
+    left: 0; right: 0;
+    height: 48px;
+    background: linear-gradient(transparent 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.85) 100%);
+    pointer-events: none;
+    margin-top: -48px;
+    flex-shrink: 0;
+  `;
+  // Re-append fade after every innerHTML update
+  const observer = new MutationObserver(() => {
+    if (panel.style.display !== 'none' && panel.scrollHeight > panel.clientHeight) {
+      if (!panel.contains(fade)) panel.appendChild(fade);
+    }
+  });
+  observer.observe(panel, { childList: true });
+
+  // Hide fade when scrolled to bottom
+  panel.addEventListener('scroll', () => {
+    const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 10;
+    fade.style.opacity = atBottom ? '0' : '1';
+  }, { passive: true });
+
   return panel;
 }
 

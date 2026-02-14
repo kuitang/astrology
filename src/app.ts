@@ -98,19 +98,14 @@ export class App {
     citySearch.style.minWidth = '0';
     toolbar.appendChild(citySearch);
 
-    // Smuggle 👶 into city input placeholder when natal mode is active
+    // Smuggle 👶 into city input when natal mode activates
     const cityInput = citySearch.querySelector('input') as HTMLInputElement;
     store.subscribe('natalMode', (natal) => {
-      if (!natal) {
-        cityInput.placeholder = '\u{1F50D} Search city...';
-      }
-      // When natal, the city name is already in the input value;
-      // the 👶 gets prepended to the displayed value
-    });
-    store.subscribe('latitude', () => {
-      const s = store.getState();
-      if (s.natalMode && cityInput.value && !cityInput.value.startsWith('\u{1F476}')) {
+      if (natal && cityInput.value && !cityInput.value.startsWith('\u{1F476}')) {
         cityInput.value = '\u{1F476} ' + cityInput.value;
+      } else if (!natal) {
+        cityInput.value = cityInput.value.replace(/^\u{1F476}\s*/u, '');
+        cityInput.placeholder = '\u{1F50D} Search city...';
       }
     });
 
@@ -163,7 +158,7 @@ export class App {
     // Start render loop
     this.animLoop.start();
 
-    // Auto-update every second (planets move, clock ticks) — only in live mode
+    // Auto-update every 60s (planet positions update) — only in live mode
     setInterval(() => {
       if (this.liveMode && !store.getState().natalMode) {
         const now = new Date();
@@ -171,7 +166,21 @@ export class App {
         store.setState({ date: now });
         datePicker.setDate(now);
       }
-    }, 1000);
+    }, 60000);
+
+    // Blinking colon every 500ms to indicate live time
+    let colonVisible = true;
+    setInterval(() => {
+      if (this.liveMode && !store.getState().natalMode && dateInput) {
+        const raw = dateInput.value;
+        if (colonVisible) {
+          dateInput.value = raw.replace(/:/g, '\u2005'); // thin space
+        } else {
+          datePicker.setDate(this.baseDate); // restore real value with colons
+        }
+        colonVisible = !colonVisible;
+      }
+    }, 500);
 
     // Welcome message in the info panel (dismissed on first selection)
     showWelcomeInPanel(this.infoPanel);
@@ -200,8 +209,11 @@ export class App {
       store.setState({ currentTransit: transit, selectedDignity: dignity });
     }
 
-    // Refresh info panel with latest state
-    if (this.infoPanel) {
+    // Refresh info panel only for planet selections (transit data changes with time).
+    // Skip for constellation/polaris/sign — their content is static and rebuilding
+    // destroys <details> open state.
+    const selType = store.getState().selectedObject?.type;
+    if (this.infoPanel && selType === 'planet') {
       updateInfoPanel(this.infoPanel, store.getState());
     }
   }

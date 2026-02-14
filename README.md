@@ -74,6 +74,7 @@ Starfield data (`public/data/stars-hyg.json`) is also generated from HYG: 5,071 
 ```bash
 npm install          # Install dependencies
 npm run dev          # Start dev server (http://localhost:5173)
+npx vite --host 0.0.0.0  # Expose on LAN (for mobile/Tailnet testing)
 npm test             # Run unit tests (Vitest)
 npm run test:e2e     # Run Playwright E2E tests
 npx tsc --noEmit     # Type check

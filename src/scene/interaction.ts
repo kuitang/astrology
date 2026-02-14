@@ -77,6 +77,10 @@ export class Interaction {
     }
 
     const result = risingHit ?? planetHit ?? signHit ?? constellationHit ?? polarisHit;
-    this.onSelect(result);
+    // Only fire selection when something is actually hit;
+    // tapping empty space is a no-op (preserves welcome panel / current selection)
+    if (result) {
+      this.onSelect(result);
+    }
   }
 }

@@ -4,10 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#000008" />
-    <meta name="description" content="3D geocentric orrery — explore natal charts, transits, and dignities" />
+    <meta name="description" content="See the planets and signs in the sky at any time, including the moment you were born" />
+    <!-- Open Graph (iMessage, WhatsApp, Slack, Discord, Facebook, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="3D Astrology Star Chart" />
+    <meta property="og:description" content="See the planets and signs in the sky at any time, including the moment you were born" />
+    <meta property="og:image" content="https://astrology3d.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://astrology3d.app" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="3D Astrology Star Chart" />
+    <meta name="twitter:description" content="See the planets and signs in the sky at any time, including the moment you were born" />
+    <meta name="twitter:image" content="https://astrology3d.app/og-image.png" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <title>Astrology Orrery</title>
+    <title>3D Astrology Star Chart</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, sans-serif; color: #fff; position: fixed; touch-action: none; }
@@ -22,9 +35,11 @@
         background: rgba(0,0,0,0.85);
         border: 1px solid rgba(255,255,255,0.2);
         padding: 12px;
+        padding-bottom: 32px;
         backdrop-filter: blur(8px);
         display: none;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         font-size: 13px;
         line-height: 1.4;
         /* Desktop default */
@@ -52,6 +67,12 @@
       #info-panel .info-cards .card-label { color: #888; font-size: 11px; }
       #info-panel .info-cards .card-value { font-weight: 500; font-size: 13px; }
       #info-panel .interp-text { font-size: 12px; color: #bbb; line-height: 1.45; margin-top: 6px; }
+      /* Themed scrollbar (desktop Chrome/Edge) */
+      #info-panel::-webkit-scrollbar { width: 6px; }
+      #info-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+      #info-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 3px; }
+      #info-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+      #info-panel { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.35) transparent; }
       #info-panel details { margin-top: 6px; font-size: 12px; color: #999; }
       #info-panel details summary { cursor: pointer; color: #aaa; }
       @keyframes fadeSlideIn {
@@ -60,10 +81,12 @@
       }
       @media (max-width: 767px) {
         #info-panel {
-          top: auto; right: 0;
-          bottom: 0; left: 0;
-          width: 100%; max-height: 40vh;
-          border-radius: 12px 12px 0 0;
+          top: auto;
+          right: 8px;
+          bottom: 8px;
+          left: 8px;
+          width: auto; max-height: 40vh;
+          border-radius: 12px;
           animation: fadeSlideUp 0.3s ease-out;
         }
         @keyframes fadeSlideUp {

@@ -2,16 +2,19 @@ import * as THREE from 'three';
 import type { HouseCusps } from '../types/astro.js';
 import { degreesToRadians } from '../utils/math.js';
 
-const HOUSE_LINE_RADIUS = 32;
-const BELT_RADIUS = 28;
+/** Ascendant rendered like a planet: small marker + glyph label above it */
+const ASC_ORBIT_RADIUS = 13; // Same zone as planets (Sun=12, Mars=14)
+const ASC_LINE_LENGTH = 28;  // Half-line extends to zodiac belt
+const ASC_COLOR = 0xff4444;
+const ASC_SIZE = 0.6;        // Similar to planet sphere size
 
 export class HouseVisuals {
   group: THREE.Group;
   /** Separate group for ASC hit target — added to raycast targets */
   ascGroup: THREE.Group;
-  private lines: THREE.Line[] = [];
-  private markers: THREE.Sprite[] = [];
-  private horizonLine: THREE.Line | null = null;
+  private ascLine: THREE.Line | null = null;
+  private ascMarker: THREE.Mesh | null = null;
+  private ascLabel: THREE.Sprite | null = null;
   private ascHitMesh: THREE.Mesh | null = null;
 
   constructor() {
@@ -24,37 +27,7 @@ export class HouseVisuals {
   }
 
   update(houses: HouseCusps | null): void {
-    // Clear existing lines
-    for (const line of this.lines) {
-      this.group.remove(line);
-      line.geometry.dispose();
-      (line.material as THREE.Material).dispose();
-    }
-    this.lines = [];
-
-    // Clear existing markers
-    for (const sprite of this.markers) {
-      this.group.remove(sprite);
-      (sprite.material as THREE.SpriteMaterial).map?.dispose();
-      sprite.material.dispose();
-    }
-    this.markers = [];
-
-    // Clear horizon line
-    if (this.horizonLine) {
-      this.group.remove(this.horizonLine);
-      this.horizonLine.geometry.dispose();
-      (this.horizonLine.material as THREE.Material).dispose();
-      this.horizonLine = null;
-    }
-
-    // Clear ASC hit target
-    if (this.ascHitMesh) {
-      this.ascGroup.remove(this.ascHitMesh);
-      this.ascHitMesh.geometry.dispose();
-      (this.ascHitMesh.material as THREE.Material).dispose();
-      this.ascHitMesh = null;
-    }
+    this.clear();
 
     if (!houses) {
       this.group.visible = false;
@@ -65,123 +38,99 @@ export class HouseVisuals {
     this.group.visible = true;
     this.ascGroup.visible = true;
 
-    const CUSP_HEIGHT = 4; // vertical height of cusp planes
-
-    for (let i = 0; i < 12; i++) {
-      const cuspDeg = houses.cusps[i]!;
-      const lonRad = degreesToRadians(cuspDeg);
-
-      const isAngle = i === 0 || i === 3 || i === 6 || i === 9;
-      const outerX = HOUSE_LINE_RADIUS * Math.cos(lonRad);
-      const outerZ = -HOUSE_LINE_RADIUS * Math.sin(lonRad);
-
-      // Translucent vertical plane (triangle strip: bottom-top at origin + bottom-top at outer)
-      const planeGeom = new THREE.BufferGeometry();
-      const verts = new Float32Array([
-        0, -CUSP_HEIGHT / 2, 0,
-        0,  CUSP_HEIGHT / 2, 0,
-        outerX, -CUSP_HEIGHT / 2, outerZ,
-        outerX,  CUSP_HEIGHT / 2, outerZ,
-      ]);
-      const indices = [0, 1, 2, 1, 3, 2];
-      planeGeom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-      planeGeom.setIndex(indices);
-
-      const planeMat = new THREE.MeshBasicMaterial({
-        color: isAngle ? 0xffaa00 : 0x555555,
-        transparent: true,
-        opacity: isAngle ? 0.15 : 0.06,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      });
-
-      const plane = new THREE.Mesh(planeGeom, planeMat);
-      plane.name = `house-plane-${i + 1}`;
-      this.group.add(plane);
-
-      // Edge line on top of the plane for definition
-      const lineGeom = new THREE.BufferGeometry();
-      lineGeom.setAttribute('position', new THREE.Float32BufferAttribute([
-        0, 0, 0, outerX, 0, outerZ,
-      ], 3));
-      const lineMat = new THREE.LineBasicMaterial({
-        color: isAngle ? 0xffaa00 : 0x555555,
-        transparent: true,
-        opacity: isAngle ? 0.8 : 0.4,
-      });
-
-      const line = new THREE.Line(lineGeom, lineMat);
-      line.name = `house-line-${i + 1}`;
-      this.lines.push(line);
-      this.group.add(line);
-    }
-
-    // Bright horizon line ASC ↔ DSC (full diameter across orrery)
     const ascRad = degreesToRadians(houses.ascendant);
-    const dscRad = degreesToRadians((houses.ascendant + 180) % 360);
-    const horizonGeom = new THREE.BufferGeometry();
-    horizonGeom.setAttribute('position', new THREE.Float32BufferAttribute([
-      (BELT_RADIUS + 3) * Math.cos(dscRad), 0.15, -(BELT_RADIUS + 3) * Math.sin(dscRad),
-      0, 0.15, 0,
-      (BELT_RADIUS + 3) * Math.cos(ascRad), 0.15, -(BELT_RADIUS + 3) * Math.sin(ascRad),
+    const cosA = Math.cos(ascRad);
+    const sinA = -Math.sin(ascRad);
+    const x = ASC_ORBIT_RADIUS * cosA;
+    const z = ASC_ORBIT_RADIUS * sinA;
+
+    // Half-line from Earth (origin) outward to zodiac belt
+    const lineGeom = new THREE.BufferGeometry();
+    lineGeom.setAttribute('position', new THREE.Float32BufferAttribute([
+      0, 0.1, 0,
+      ASC_LINE_LENGTH * cosA, 0.1, ASC_LINE_LENGTH * sinA,
     ], 3));
-    const horizonMat = new THREE.LineBasicMaterial({
-      color: 0xff4444,
+    const lineMat = new THREE.LineBasicMaterial({
+      color: ASC_COLOR,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.4,
     });
-    this.horizonLine = new THREE.Line(horizonGeom, horizonMat);
-    this.horizonLine.name = 'horizon-line';
-    this.group.add(this.horizonLine);
+    this.ascLine = new THREE.Line(lineGeom, lineMat);
+    this.ascLine.name = 'asc-line';
+    this.group.add(this.ascLine);
 
-    // ASC marker (prominent, large label)
-    this.addAngleMarker(houses.ascendant, 'ASC ↑', 0xff4444, true);
-    // MC marker
-    this.addAngleMarker(houses.mc, 'MC', 0xffaa00, false);
+    // Small sphere marker at ASC position (like a planet body)
+    const markerGeom = new THREE.SphereGeometry(ASC_SIZE, 16, 16);
+    const markerMat = new THREE.MeshStandardMaterial({
+      color: ASC_COLOR,
+      emissive: ASC_COLOR,
+      emissiveIntensity: 0.6,
+      roughness: 0.4,
+    });
+    this.ascMarker = new THREE.Mesh(markerGeom, markerMat);
+    this.ascMarker.position.set(x, 0, z);
+    this.ascMarker.name = 'asc-marker';
+    this.group.add(this.ascMarker);
 
-    // Clickable ASC hit target — large sphere on the belt at ascendant
-    const hitRadius = 3;
-    const hitGeom = new THREE.SphereGeometry(hitRadius, 8, 8);
-    const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+    // Glyph label above the marker (↑) — same style as planet glyphs
+    const canvasSize = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
+    const ctx = canvas.getContext('2d')!;
+    ctx.font = '96px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 4;
+    ctx.strokeText('↑', canvasSize / 2, canvasSize / 2);
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText('↑', canvasSize / 2, canvasSize / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    this.ascLabel = new THREE.Sprite(spriteMat);
+    this.ascLabel.position.set(x, ASC_SIZE + 1.5, z); // Above marker, like planets
+    this.ascLabel.scale.set(3.0, 3.0, 1); // Same scale as planet glyphs
+    this.ascLabel.name = 'asc-label';
+    this.group.add(this.ascLabel);
+
+    // Clickable hit target — invisible sphere at ASC position
+    const hitGeom = new THREE.SphereGeometry(2.5, 8, 8);
+    const hitMat = new THREE.MeshBasicMaterial({
+      transparent: true, opacity: 0, depthWrite: false,
+    });
     this.ascHitMesh = new THREE.Mesh(hitGeom, hitMat);
-    this.ascHitMesh.position.set(
-      BELT_RADIUS * Math.cos(ascRad), 0, -BELT_RADIUS * Math.sin(ascRad)
-    );
+    this.ascHitMesh.position.set(x, 0, z);
     this.ascHitMesh.name = 'asc-hit';
     this.ascHitMesh.userData = { type: 'rising' };
     this.ascGroup.add(this.ascHitMesh);
   }
 
-  private addAngleMarker(deg: number, label: string, color: number, large: boolean): void {
-    const lonRad = degreesToRadians(deg);
-    const r = HOUSE_LINE_RADIUS + 2;
-
-    const canvasW = large ? 128 : 64;
-    const canvasH = large ? 48 : 32;
-    const fontSize = large ? 28 : 20;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = canvasW;
-    canvas.height = canvasH;
-    const ctx = canvas.getContext('2d')!;
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    // Black outline for readability
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-    ctx.lineWidth = 3;
-    ctx.strokeText(label, canvasW / 2, canvasH / 2);
-    ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
-    ctx.fillText(label, canvasW / 2, canvasH / 2);
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    const sprite = new THREE.Sprite(spriteMat);
-    sprite.position.set(
-      r * Math.cos(lonRad), large ? 1.5 : 0, -r * Math.sin(lonRad)
-    );
-    const scale = large ? 3.5 : 2;
-    sprite.scale.set(scale, scale * (canvasH / canvasW), 1);
-    this.markers.push(sprite);
-    this.group.add(sprite);
+  private clear(): void {
+    if (this.ascLine) {
+      this.group.remove(this.ascLine);
+      this.ascLine.geometry.dispose();
+      (this.ascLine.material as THREE.Material).dispose();
+      this.ascLine = null;
+    }
+    if (this.ascMarker) {
+      this.group.remove(this.ascMarker);
+      this.ascMarker.geometry.dispose();
+      (this.ascMarker.material as THREE.Material).dispose();
+      this.ascMarker = null;
+    }
+    if (this.ascLabel) {
+      this.group.remove(this.ascLabel);
+      (this.ascLabel.material as THREE.SpriteMaterial).map?.dispose();
+      this.ascLabel.material.dispose();
+      this.ascLabel = null;
+    }
+    if (this.ascHitMesh) {
+      this.ascGroup.remove(this.ascHitMesh);
+      this.ascHitMesh.geometry.dispose();
+      (this.ascHitMesh.material as THREE.Material).dispose();
+      this.ascHitMesh = null;
+    }
   }
 }
