@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/astrology/' : '/',
+  base: '/', // Using custom domain astrology3d.app
   build: {
     target: 'es2020',
     rollupOptions: {
