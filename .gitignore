@@ -5,7 +5,7 @@ dist/
 tests/screenshots/
 test-results/
 *.png
-*.jpeg
-*.jpg
+!public/*.png
 .playwright-mcp/
 playwright-report/
+pw-override.config.ts
