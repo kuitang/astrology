@@ -57,17 +57,31 @@ function createPlanetTexture(baseColor: number, name: string): THREE.Texture {
   return texture;
 }
 
+// Reusable scratch vectors to avoid per-frame allocations
+const _tempDir = new THREE.Vector3();
+const _upVec = new THREE.Vector3(0, 1, 0);
+const _projVec = new THREE.Vector3();
+const _sizeVec = new THREE.Vector2();
+
+const ARC_SEGMENTS = 16;
+const ARC_VERTS = ARC_SEGMENTS + 1;
+
 export class PlanetVisuals {
   group: THREE.Group;
   private meshes = new Map<PlanetId, THREE.Mesh>();
   private hitCylinders = new Map<PlanetId, THREE.Mesh>();
   private labels = new Map<PlanetId, THREE.Sprite>();
   private arcs = new Map<PlanetId, THREE.Line>();
+  private arrowheads = new Map<PlanetId, THREE.Mesh>();
 
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'planetGroup';
     const mobile = isMobile();
+
+    // Shared arrowhead geometry (reused for all planets)
+    const arrowGeom = new THREE.ConeGeometry(0.2, 0.5, 6);
+    arrowGeom.rotateX(Math.PI / 2);
 
     for (const meta of PLANETS) {
       // Planet sphere with procedural texture
@@ -89,9 +103,9 @@ export class PlanetVisuals {
       // Invisible hit cylinder from planet radius out toward the belt (radius 25)
       // Stops before the belt to avoid blocking constellation clicks behind it
       const hitRadius = mobile ? 1.5 : 1.0;
-      const hitLength = Math.max(2, 24 - meta.orbitRadius); // stop before belt
+      const hitLength = Math.max(2, 24 - meta.orbitRadius);
       const hitGeom = new THREE.CylinderGeometry(hitRadius, hitRadius, hitLength, 8);
-      hitGeom.rotateZ(Math.PI / 2); // orient along radial direction
+      hitGeom.rotateZ(Math.PI / 2);
       const hitMat = new THREE.MeshBasicMaterial({
         transparent: true,
         opacity: 0,
@@ -102,6 +116,32 @@ export class PlanetVisuals {
       hitCyl.userData = { type: 'planet', planetId: meta.id };
       this.hitCylinders.set(meta.id, hitCyl);
       this.group.add(hitCyl);
+
+      // Pre-create arc line with buffer (updated in-place later)
+      const arcPositions = new Float32Array(ARC_VERTS * 3);
+      const arcGeom = new THREE.BufferGeometry();
+      arcGeom.setAttribute('position', new THREE.BufferAttribute(arcPositions, 3));
+      const arcMat = new THREE.LineBasicMaterial({
+        color: 0x44ff44,
+        transparent: true,
+        opacity: 0.7,
+      });
+      const arcLine = new THREE.Line(arcGeom, arcMat);
+      arcLine.name = `arc-${meta.id}`;
+      arcLine.frustumCulled = false;
+      this.arcs.set(meta.id, arcLine);
+      this.group.add(arcLine);
+
+      // Pre-create arrowhead cone (shared geometry, individual material)
+      const arrowMat = new THREE.MeshBasicMaterial({
+        color: 0x44ff44,
+        transparent: true,
+        opacity: 0.7,
+      });
+      const arrow = new THREE.Mesh(arrowGeom, arrowMat);
+      arrow.name = `arrow-${meta.id}`;
+      this.arrowheads.set(meta.id, arrow);
+      this.group.add(arrow);
 
       // Glyph label — bigger on mobile
       const canvasSize = mobile ? 128 : 64;
@@ -115,7 +155,6 @@ export class PlanetVisuals {
       ctx.font = `${fontSize}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // White outline for readability
       ctx.strokeStyle = 'rgba(0,0,0,0.8)';
       ctx.lineWidth = 4;
       ctx.strokeText(meta.glyph, canvasSize / 2, canvasSize / 2);
@@ -149,77 +188,71 @@ export class PlanetVisuals {
       // Position hit cylinder from planet outward along the radial direction
       const hitCyl = this.hitCylinders.get(id);
       if (hitCyl) {
-        const midRadius = (meta.orbitRadius + 25) / 2;
+        const midRadius = (meta.orbitRadius + 24) / 2;
         const [mx, my, mz] = eclipticToCartesian(pos.longitude, pos.latitude, midRadius);
         hitCyl.position.set(mx, my, mz);
-        // Orient cylinder along the radial direction
-        const dir = new THREE.Vector3(x, y, z).normalize();
-        hitCyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        _tempDir.set(x, y, z).normalize();
+        hitCyl.quaternion.setFromUnitVectors(_upVec, _tempDir);
       }
 
-      // Curved direction arc
+      // Update direction arc in-place (no allocation)
       this.updateDirectionArc(id, pos, meta.orbitRadius);
     }
   }
 
-  /** Draw a curved arc showing the planet's direction of motion */
+  /** Update arc line buffer in-place — no geometry/material allocation */
   private updateDirectionArc(id: PlanetId, pos: PlanetPosition, radius: number): void {
-    const existing = this.arcs.get(id);
-    if (existing) {
-      this.group.remove(existing);
-      existing.geometry.dispose();
-      (existing.material as THREE.Material).dispose();
-    }
+    const arcLine = this.arcs.get(id);
+    if (!arcLine) return;
 
     const isRetrograde = pos.speed < 0;
-    const arcLength = 8; // degrees of arc to draw
+    const arcLength = 8;
     const startDeg = pos.longitude;
     const endDeg = isRetrograde ? startDeg - arcLength : startDeg + arcLength;
+    const color = isRetrograde ? 0xff4444 : 0x44ff44;
 
-    const segments = 16;
-    const points: THREE.Vector3[] = [];
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
+    const posAttr = arcLine.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const latRad = pos.latitude * Math.PI / 180;
+    const cosLat = Math.cos(latRad);
+    const sinLat = Math.sin(latRad);
+
+    let lastX = 0, lastY = 0, lastZ = 0;
+    let prevX = 0, prevY = 0, prevZ = 0;
+
+    for (let i = 0; i <= ARC_SEGMENTS; i++) {
+      const t = i / ARC_SEGMENTS;
       const deg = startDeg + (endDeg - startDeg) * t;
       const rad = deg * Math.PI / 180;
-      const latRad = pos.latitude * Math.PI / 180;
-      points.push(new THREE.Vector3(
-        radius * Math.cos(latRad) * Math.cos(rad),
-        radius * Math.sin(latRad),
-        -radius * Math.cos(latRad) * Math.sin(rad)
-      ));
+      const px = radius * cosLat * Math.cos(rad);
+      const py = radius * sinLat;
+      const pz = -radius * cosLat * Math.sin(rad);
+      posAttr.setXYZ(i, px, py, pz);
+
+      if (i === ARC_SEGMENTS - 1) { prevX = px; prevY = py; prevZ = pz; }
+      if (i === ARC_SEGMENTS) { lastX = px; lastY = py; lastZ = pz; }
     }
+    posAttr.needsUpdate = true;
+    arcLine.geometry.setDrawRange(0, ARC_VERTS);
+    (arcLine.material as THREE.LineBasicMaterial).color.set(color);
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const color = isRetrograde ? 0xff4444 : 0x44ff44;
-    const material = new THREE.LineBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.7,
-    });
-    const line = new THREE.Line(geometry, material);
-    line.name = `arc-${id}`;
-    this.arcs.set(id, line);
-    this.group.add(line);
-
-    // Arrowhead at the end of the arc
-    const last = points[points.length - 1]!;
-    const prev = points[points.length - 2]!;
-    const dir = new THREE.Vector3().subVectors(last, prev).normalize();
-    const arrowHelper = new THREE.ArrowHelper(dir, last, 0.8, color, 0.4, 0.2);
-    // Store with the line for cleanup
-    line.add(arrowHelper);
+    // Update arrowhead position and orientation
+    const arrow = this.arrowheads.get(id);
+    if (arrow) {
+      arrow.position.set(lastX, lastY, lastZ);
+      _tempDir.set(lastX - prevX, lastY - prevY, lastZ - prevZ).normalize();
+      arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), _tempDir);
+      (arrow.material as THREE.MeshBasicMaterial).color.set(color);
+    }
   }
 
   getScreenPos(id: PlanetId, camera: THREE.Camera, renderer: THREE.WebGLRenderer): { x: number; y: number } | null {
     const mesh = this.meshes.get(id);
     if (!mesh) return null;
-    const vec = mesh.position.clone();
-    vec.project(camera);
-    const size = renderer.getSize(new THREE.Vector2());
+    _projVec.copy(mesh.position).project(camera);
+    renderer.getSize(_sizeVec);
     return {
-      x: (vec.x * 0.5 + 0.5) * size.x,
-      y: (-vec.y * 0.5 + 0.5) * size.y,
+      x: (_projVec.x * 0.5 + 0.5) * _sizeVec.x,
+      y: (-_projVec.y * 0.5 + 0.5) * _sizeVec.y,
     };
   }
 }

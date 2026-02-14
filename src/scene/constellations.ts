@@ -78,16 +78,30 @@ export function createConstellations(): THREE.Group {
 
   const circleTexture = createCircleTexture();
 
+  // Shared materials for all constellations (avoid duplicate draw calls)
+  const lineMaterial = new THREE.LineBasicMaterial({
+    color: 0x3366aa,
+    transparent: true,
+    opacity: 0.35,
+  });
+  const starSpriteMat = new THREE.SpriteMaterial({
+    map: circleTexture,
+    transparent: true,
+    opacity: 0.9,
+    color: 0xaaddff,
+    sizeAttenuation: true,
+  });
+  const hitGeom = new THREE.SphereGeometry(5, 8, 8);
+  const hitMat = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+  });
+
   for (const con of ZODIAC_CONSTELLATIONS) {
     const r = constellationRadius(con.distanceLy);
 
     // Stick figure lines
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0x3366aa,
-      transparent: true,
-      opacity: 0.35,
-    });
-
     for (const [i, j] of con.lines) {
       const starA = con.stars[i]!;
       const starB = con.stars[j]!;
@@ -98,33 +112,20 @@ export function createConstellations(): THREE.Group {
       group.add(line);
     }
 
-    // Constellation stars as circle sprites
+    // Constellation stars as circle sprites (shared material)
     for (const [lon, lat] of con.stars) {
       const pos = starPos(lon, lat, r);
-      const spriteMat = new THREE.SpriteMaterial({
-        map: circleTexture,
-        transparent: true,
-        opacity: 0.9,
-        color: 0xaaddff,
-        sizeAttenuation: true,
-      });
-      const sprite = new THREE.Sprite(spriteMat);
+      const sprite = new THREE.Sprite(starSpriteMat);
       sprite.position.copy(pos);
       sprite.scale.set(0.8, 0.8, 1);
       group.add(sprite);
     }
 
-    // Invisible click target
+    // Invisible click target (shared geometry and material)
     const midLon = con.stars.reduce((s: number, st: [number, number]) => s + st[0], 0) / con.stars.length;
     const midLat = con.stars.reduce((s: number, st: [number, number]) => s + st[1], 0) / con.stars.length;
     const hitPos = starPos(midLon, midLat, r);
 
-    const hitGeom = new THREE.SphereGeometry(5, 8, 8);
-    const hitMat = new THREE.MeshBasicMaterial({
-      transparent: true,
-      opacity: 0,
-      side: THREE.DoubleSide,
-    });
     const hitMesh = new THREE.Mesh(hitGeom, hitMat);
     hitMesh.position.copy(hitPos);
     hitMesh.name = `constellation-hit-${con.abbr}`;

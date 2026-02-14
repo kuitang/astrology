@@ -7,6 +7,7 @@ const HOUSE_LINE_RADIUS = 28;
 export class HouseVisuals {
   group: THREE.Group;
   private lines: THREE.Line[] = [];
+  private markers: THREE.Sprite[] = [];
 
   constructor() {
     this.group = new THREE.Group();
@@ -15,13 +16,21 @@ export class HouseVisuals {
   }
 
   update(houses: HouseCusps | null): void {
-    // Clear existing
+    // Clear existing lines
     for (const line of this.lines) {
       this.group.remove(line);
       line.geometry.dispose();
       (line.material as THREE.Material).dispose();
     }
     this.lines = [];
+
+    // Clear existing markers
+    for (const sprite of this.markers) {
+      this.group.remove(sprite);
+      (sprite.material as THREE.SpriteMaterial).map?.dispose();
+      sprite.material.dispose();
+    }
+    this.markers = [];
 
     if (!houses) {
       this.group.visible = false;
@@ -80,6 +89,7 @@ export class HouseVisuals {
       r * Math.cos(lonRad), 0, -r * Math.sin(lonRad)
     );
     sprite.scale.set(2, 1, 1);
+    this.markers.push(sprite);
     this.group.add(sprite);
   }
 }
