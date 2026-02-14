@@ -2,6 +2,7 @@ import type { AppState, SelectedObject } from '../types/astro.js';
 import { ZODIAC_SIGNS } from '../data/zodiac-signs.js';
 import { PLANET_MAP } from '../data/planet-metadata.js';
 import { getDignity, DIGNITY_LABELS, DIGNITY_COLORS } from '../data/dignities.js';
+import { ZODIAC_CONSTELLATIONS } from '../scene/constellations.js';
 import { formatDegrees } from '../utils/math.js';
 import { isMobile } from '../utils/responsive.js';
 
@@ -11,7 +12,7 @@ export function createInfoPanel(): HTMLElement {
   panel.dataset.testid = 'info-panel';
   panel.style.cssText = `
     position: absolute;
-    ${isMobile() ? 'bottom: 0; left: 0; right: 0; max-height: 50vh;' : 'top: 12px; right: 12px; width: 280px;'}
+    ${isMobile() ? 'bottom: 0; left: 0; right: 0; max-height: 50vh;' : 'top: 60px; right: 12px; width: 300px; max-height: 70vh;'}
     pointer-events: auto;
     background: rgba(0,0,0,0.8);
     border: 1px solid rgba(255,255,255,0.2);
@@ -70,7 +71,7 @@ function renderPlanetInfo(panel: HTMLElement, selected: SelectedObject, state: A
     </div>
     <div style="margin-bottom:8px;">
       <span style="color:#aaa">Speed:</span>
-      ${pos.speed > 0 ? '→' : '←'} ${Math.abs(pos.speed).toFixed(2)}°/day
+      ${pos.speed > 0 ? '→' : '←'} ${Math.abs(pos.speed).toFixed(1)}°/day
       ${pos.speed < 0 ? '<span style="color:#ff4444"> (Retrograde)</span>' : ''}
     </div>
     <div style="margin-bottom:8px;">
@@ -78,7 +79,7 @@ function renderPlanetInfo(panel: HTMLElement, selected: SelectedObject, state: A
       <span style="color:${dignityColor};font-weight:bold">${DIGNITY_LABELS[dignity]}</span>
     </div>
     <div style="margin-bottom:8px;">
-      <span style="color:#aaa">Distance:</span> ${pos.distance.toFixed(4)} AU
+      <span style="color:#aaa">Distance:</span> ${pos.distance.toFixed(1)} AU
     </div>
     ${state.currentTransit ? `
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);">
@@ -115,7 +116,7 @@ function renderSignInfo(panel: HTMLElement, selected: SelectedObject, state: App
     </div>
     <div style="margin-bottom:8px;">
       <span style="color:#aaa">Degrees:</span>
-      ${sign.startDegree}° — ${sign.startDegree + 30}°
+      ${sign.startDegree.toFixed(0)}° — ${(sign.startDegree + 30).toFixed(0)}°
     </div>
     <div style="margin-bottom:8px;">
       <span style="color:#aaa">Element:</span> ${sign.element.charAt(0).toUpperCase() + sign.element.slice(1)}
@@ -140,11 +141,62 @@ function formatTransitDate(date: Date): string {
 }
 
 function renderConstellationInfo(panel: HTMLElement, selected: SelectedObject): void {
+  const con = ZODIAC_CONSTELLATIONS.find(c => c.name === selected.id);
+  if (!con) {
+    panel.innerHTML = `<div style="font-size:18px;font-weight:bold;">${selected.id}</div>`;
+    return;
+  }
+
+  // Compute real angular extent
+  let realSpan = con.extent[1] - con.extent[0];
+  if (realSpan < 0) realSpan += 360; // handle Pisces wrapping
+
+  const offset = con.extent[0] - con.conventionalRange[0];
+
   panel.innerHTML = `
-    <div style="font-size:20px;font-weight:bold;margin-bottom:12px;">${selected.id}</div>
-    <div style="color:#aaa;">
-      This is the astronomical constellation ${selected.id}, shown at its real ecliptic position.
-      Due to precession (~24°), constellation positions differ from the tropical zodiac signs.
+    <div style="font-size:20px;font-weight:bold;margin-bottom:14px;color:#aaddff;">
+      ${con.name}
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-weight:bold;color:#4488ff;margin-bottom:6px;">Real Position (astronomy)</div>
+      <div style="margin-bottom:4px;">
+        <span style="color:#aaa;">Ecliptic extent:</span>
+        <strong>${con.extent[0].toFixed(1)}° — ${con.extent[1] < con.extent[0] ? con.extent[1].toFixed(1) + '° (wraps 0°)' : con.extent[1].toFixed(1) + '°'}</strong>
+      </div>
+      <div>
+        <span style="color:#aaa;">Angular width:</span>
+        <strong>${realSpan.toFixed(1)}°</strong>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-weight:bold;color:#ffaa44;margin-bottom:6px;">Conventional Sign (astrology)</div>
+      <div style="margin-bottom:4px;">
+        <span style="color:#aaa;">Sign:</span>
+        <strong>${con.conventionalSign}</strong>
+        (${con.conventionalRange[0].toFixed(0)}° — ${(con.conventionalRange[1] % 360).toFixed(0)}°)
+      </div>
+      <div>
+        <span style="color:#aaa;">Fixed width:</span>
+        <strong>30°</strong> (all signs equal)
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-weight:bold;color:#88cc88;margin-bottom:6px;">Precession Offset</div>
+      <div>
+        The real constellation is shifted <strong>~${Math.abs(offset).toFixed(1)}°</strong> ${offset > 0 ? 'ahead of' : 'behind'} its conventional sign.
+      </div>
+    </div>
+
+    <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);color:#999;font-size:13px;line-height:1.6;">
+      <strong>Why the difference?</strong> Earth's axis wobbles in a ~26,000-year cycle called the
+      <em>precession of the equinoxes</em>. Western tropical astrology fixes the signs to the seasons
+      (0° Aries = March equinox), while the constellations slowly drift. Today the gap is about 24°.
+      This orrery shows both: the <span style="color:#ffaa44;">sign divisions</span> are the
+      astrological framework, and the <span style="color:#aaddff;">constellation figures</span> show
+      where the stars actually are.
     </div>
   `;
 }

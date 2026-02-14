@@ -17,9 +17,9 @@ export function createComposer(
 
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(size.x, size.y),
-    0.5,   // strength
-    0.4,   // radius
-    0.85   // threshold
+    0.4,   // strength (lower = less glow)
+    0.3,   // radius
+    0.95   // threshold (high = only very bright objects glow, i.e. Sun)
   );
   composer.addPass(bloomPass);
 

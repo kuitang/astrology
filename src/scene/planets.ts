@@ -60,6 +60,7 @@ function createPlanetTexture(baseColor: number, name: string): THREE.Texture {
 export class PlanetVisuals {
   group: THREE.Group;
   private meshes = new Map<PlanetId, THREE.Mesh>();
+  private hitCylinders = new Map<PlanetId, THREE.Mesh>();
   private labels = new Map<PlanetId, THREE.Sprite>();
   private arcs = new Map<PlanetId, THREE.Line>();
 
@@ -84,6 +85,23 @@ export class PlanetVisuals {
       mesh.userData = { type: 'planet', planetId: meta.id };
       this.meshes.set(meta.id, mesh);
       this.group.add(mesh);
+
+      // Invisible hit cylinder from planet radius out toward the belt (radius 25)
+      // Stops before the belt to avoid blocking constellation clicks behind it
+      const hitRadius = mobile ? 1.5 : 1.0;
+      const hitLength = Math.max(2, 24 - meta.orbitRadius); // stop before belt
+      const hitGeom = new THREE.CylinderGeometry(hitRadius, hitRadius, hitLength, 8);
+      hitGeom.rotateZ(Math.PI / 2); // orient along radial direction
+      const hitMat = new THREE.MeshBasicMaterial({
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+      });
+      const hitCyl = new THREE.Mesh(hitGeom, hitMat);
+      hitCyl.name = `planet-hit-${meta.id}`;
+      hitCyl.userData = { type: 'planet', planetId: meta.id };
+      this.hitCylinders.set(meta.id, hitCyl);
+      this.group.add(hitCyl);
 
       // Glyph label — bigger on mobile
       const canvasSize = mobile ? 128 : 64;
@@ -126,6 +144,17 @@ export class PlanetVisuals {
       const label = this.labels.get(id);
       if (label) {
         label.position.set(x, y + meta.size + 1.5, z);
+      }
+
+      // Position hit cylinder from planet outward along the radial direction
+      const hitCyl = this.hitCylinders.get(id);
+      if (hitCyl) {
+        const midRadius = (meta.orbitRadius + 25) / 2;
+        const [mx, my, mz] = eclipticToCartesian(pos.longitude, pos.latitude, midRadius);
+        hitCyl.position.set(mx, my, mz);
+        // Orient cylinder along the radial direction
+        const dir = new THREE.Vector3(x, y, z).normalize();
+        hitCyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       }
 
       // Curved direction arc

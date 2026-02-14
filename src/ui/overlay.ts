@@ -8,6 +8,8 @@ export function createOverlay(): HTMLDivElement {
     z-index: 10;
     font-family: system-ui, -apple-system, sans-serif;
     color: #fff;
+    overflow: hidden;
+    touch-action: none;
   `;
   return overlay;
 }

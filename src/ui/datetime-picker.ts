@@ -1,65 +1,122 @@
+import flatpickr from 'flatpickr';
+import type { Instance as FlatpickrInstance } from 'flatpickr/dist/types/instance';
+import 'flatpickr/dist/flatpickr.min.css';
+
+export interface DateTimePicker {
+  element: HTMLElement;
+  /** Update the displayed date without triggering onChange */
+  setDate(date: Date): void;
+}
+
 export function createDateTimePicker(
   onChange: (date: Date) => void,
   initialDate: Date
-): HTMLElement {
+): DateTimePicker {
   const container = document.createElement('div');
-  container.style.cssText = `
-    position: absolute;
-    top: 12px; left: 12px;
-    pointer-events: auto;
-    background: rgba(0,0,0,0.75);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    padding: 10px 14px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    backdrop-filter: blur(8px);
-  `;
   container.dataset.testid = 'date-picker';
+  container.style.cssText = `
+    pointer-events: auto;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  `;
 
-  const dateInput = document.createElement('input');
-  dateInput.type = 'date';
-  dateInput.dataset.testid = 'date-input';
-  dateInput.style.cssText = `
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.dataset.testid = 'datetime-input';
+  input.style.cssText = `
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 4px;
+    border-radius: 6px;
     color: #fff;
-    padding: 4px 8px;
-    font-size: 14px;
+    padding: 6px 10px;
+    font-size: 13px;
+    width: 180px;
+    cursor: pointer;
+    font-family: inherit;
   `;
 
-  const timeInput = document.createElement('input');
-  timeInput.type = 'time';
-  timeInput.dataset.testid = 'time-input';
-  timeInput.style.cssText = dateInput.style.cssText;
+  container.appendChild(input);
 
-  function setInputValues(d: Date): void {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    dateInput.value = `${y}-${m}-${day}`;
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    timeInput.value = `${h}:${min}`;
-  }
+  // Inject dark theme overrides for flatpickr
+  const style = document.createElement('style');
+  style.textContent = `
+    .flatpickr-calendar {
+      background: rgba(10, 10, 20, 0.95) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+      border-radius: 8px !important;
+      backdrop-filter: blur(12px) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+      font-family: system-ui, -apple-system, sans-serif !important;
+    }
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-weekdays, span.flatpickr-weekday {
+      background: transparent !important;
+      color: rgba(255,255,255,0.7) !important;
+    }
+    .flatpickr-day {
+      color: #fff !important;
+      border-radius: 4px !important;
+    }
+    .flatpickr-day:hover {
+      background: rgba(68, 136, 255, 0.3) !important;
+      border-color: transparent !important;
+    }
+    .flatpickr-day.selected {
+      background: #4488ff !important;
+      border-color: #4488ff !important;
+    }
+    .flatpickr-day.today {
+      border-color: rgba(68, 136, 255, 0.5) !important;
+    }
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month {
+      fill: #fff !important;
+    }
+    .flatpickr-months .flatpickr-prev-month:hover svg,
+    .flatpickr-months .flatpickr-next-month:hover svg {
+      fill: #4488ff !important;
+    }
+    .flatpickr-current-month input.cur-year {
+      color: #fff !important;
+    }
+    .flatpickr-time input, .flatpickr-time .flatpickr-am-pm {
+      color: #fff !important;
+      background: transparent !important;
+    }
+    .flatpickr-time .flatpickr-time-separator {
+      color: rgba(255,255,255,0.5) !important;
+    }
+    .numInputWrapper span {
+      border-color: rgba(255,255,255,0.2) !important;
+    }
+    .numInputWrapper span:hover {
+      background: rgba(68, 136, 255, 0.2) !important;
+    }
+    .numInputWrapper span svg path {
+      fill: rgba(255,255,255,0.5) !important;
+    }
+  `;
+  document.head.appendChild(style);
 
-  setInputValues(initialDate);
+  let fp: FlatpickrInstance;
+  fp = flatpickr(input, {
+    defaultDate: initialDate,
+    enableTime: true,
+    time_24hr: true,
+    dateFormat: 'Y-m-d H:i',
+    onChange: (selectedDates) => {
+      if (selectedDates[0]) {
+        onChange(selectedDates[0]);
+      }
+    },
+  }) as FlatpickrInstance;
 
-  function emitChange(): void {
-    if (!dateInput.value || !timeInput.value) return;
-    const [y, m, d] = dateInput.value.split('-').map(Number) as [number, number, number];
-    const [h, min] = timeInput.value.split(':').map(Number) as [number, number];
-    const newDate = new Date(y, m - 1, d, h, min);
-    onChange(newDate);
-  }
-
-  dateInput.addEventListener('change', emitChange);
-  timeInput.addEventListener('change', emitChange);
-
-  container.appendChild(dateInput);
-  container.appendChild(timeInput);
-
-  return container;
+  return {
+    element: container,
+    setDate(date: Date) {
+      fp.setDate(date, false); // false = don't trigger onChange
+    },
+  };
 }

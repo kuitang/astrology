@@ -13,6 +13,7 @@
   "license": "MIT",
   "dependencies": {
     "astronomy-engine": "^2.1.19",
+    "flatpickr": "^4.6.13",
     "three": "^0.182.0"
   },
   "devDependencies": {

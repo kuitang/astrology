@@ -53,19 +53,38 @@ export class App {
     const overlay = createOverlay();
     this.container.appendChild(overlay);
 
+    // Top toolbar: date picker + city search in a single row
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText = `
+      position: absolute;
+      top: 12px; left: 12px;
+      pointer-events: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px 10px;
+      backdrop-filter: blur(8px);
+    `;
+
     const datePicker = createDateTimePicker((date) => {
       this.baseDate = date;
       store.setState({ date });
     }, store.getState().date);
-    overlay.appendChild(datePicker);
+    toolbar.appendChild(datePicker.element);
 
     const citySearch = createCitySearch((lat, lng, tz) => {
       store.setState({ latitude: lat, longitude: lng, timezone: tz });
     });
-    overlay.appendChild(citySearch);
+    toolbar.appendChild(citySearch);
+
+    overlay.appendChild(toolbar);
 
     const timeScrubber = createTimeScrubber((days) => {
       const d = new Date(this.baseDate.getTime() + days * 86400000);
+      datePicker.setDate(d);
       store.setState({ date: d });
     });
     overlay.appendChild(timeScrubber);

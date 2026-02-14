@@ -22,7 +22,5 @@ export function radiansToDegrees(rad: number): number {
 }
 
 export function formatDegrees(deg: number): string {
-  const d = Math.floor(deg);
-  const m = Math.floor((deg - d) * 60);
-  return `${d}°${m.toString().padStart(2, '0')}'`;
+  return `${deg.toFixed(1)}°`;
 }

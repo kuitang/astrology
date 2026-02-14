@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 export function createCamera(container: HTMLElement): THREE.PerspectiveCamera {
   const aspect = container.clientWidth / container.clientHeight;
   const camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
-  camera.position.set(0, 15, 35);
+  camera.position.set(0, 25, 50);
   camera.lookAt(0, 0, 0);
 
   const onResize = () => {

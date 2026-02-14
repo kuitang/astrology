@@ -32,9 +32,8 @@ export function buildScene(): SceneComponents {
   sunLight.position.set(10, 5, 10);
   scene.add(sunLight);
 
-  // Starfield (background, not tilted)
-  const starfield = createStarfield();
-  scene.add(starfield);
+  // Starfield loaded async from HYG catalog — added to scene when ready
+  createStarfield().then(starfield => scene.add(starfield));
 
   // Ecliptic group — tilted by obliquity
   const eclipticGroup = new THREE.Group();

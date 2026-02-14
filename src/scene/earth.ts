@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export function createEarth(): THREE.Mesh {
-  const geometry = new THREE.SphereGeometry(1.5, 64, 64);
+  const geometry = new THREE.SphereGeometry(2.5, 64, 64);
   const material = new THREE.MeshStandardMaterial({
     color: 0x2244aa,
     roughness: 0.8,

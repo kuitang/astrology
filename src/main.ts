@@ -1,14 +1,20 @@
 import { App } from './app.js';
 import { createLoadingScreen, updateLoadingStatus, hideLoadingScreen } from './ui/loading-screen.js';
 
+import * as THREE from 'three';
+
 declare global {
   interface Window {
     __APP__: App;
     __APP_READY__: boolean;
+    __THREE__: typeof THREE;
     __CONSOLE_ERRORS__: string[];
     __WEBGL_ERRORS__: string[];
   }
 }
+
+// Expose THREE for tests
+window.__THREE__ = THREE;
 
 // Track console errors
 window.__CONSOLE_ERRORS__ = [];

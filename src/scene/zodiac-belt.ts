@@ -16,13 +16,7 @@ function createGlyphCanvas(glyph: string, color: number, mobile: boolean): HTMLC
   const hex = `#${color.toString(16).padStart(6, '0')}`;
   const fontSize = mobile ? size * 0.65 : size * 0.7;
 
-  // Subtle background circle
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size * 0.4, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fill();
-
-  // Glyph with outline
+  // Glyph with outline (no background circle)
   ctx.font = `${fontSize}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -78,9 +72,11 @@ export function createZodiacBelt(): THREE.Group {
     group.add(tick);
 
     // Invisible raycast mesh for sign selection (flat ring segment)
+    // RingGeometry angles go counter-clockwise in XY; after rotateX(π/2) they
+    // match our ecliptic convention (longitude increases toward -Z)
     const selectGeom = new THREE.RingGeometry(
-      BELT_RADIUS - 2,
-      BELT_RADIUS + 2,
+      BELT_RADIUS - 3,
+      BELT_RADIUS + 3,
       16, 1,
       startAngle,
       degreesToRadians(30)

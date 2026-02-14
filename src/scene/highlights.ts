@@ -5,7 +5,7 @@ import { PLANET_MAP } from '../data/planet-metadata.js';
 import { degreesToRadians, eclipticToCartesian } from '../utils/math.js';
 
 const BELT_RADIUS = 25;
-const SECTOR_OPACITY = 0.08;
+const SECTOR_OPACITY = 0.12;
 
 export class HighlightSystem {
   group: THREE.Group;
@@ -60,18 +60,20 @@ export class HighlightSystem {
     const segments = 32;
 
     // Build a filled sector shape (triangle fan from origin)
+    // Lift slightly above ecliptic plane (y=0.1) to avoid z-fighting with belt
+    const Y_OFFSET = 0.1;
     const vertices: number[] = [];
     for (let i = 0; i < segments; i++) {
       {
         const a1 = startRad + (endRad - startRad) * (i / segments);
         const a2 = startRad + (endRad - startRad) * ((i + 1) / segments);
-        vertices.push(0, 0, 0);
+        vertices.push(0, Y_OFFSET, 0);
         vertices.push(
-          (BELT_RADIUS + 2) * Math.cos(a1), 0,
+          (BELT_RADIUS + 2) * Math.cos(a1), Y_OFFSET,
           -(BELT_RADIUS + 2) * Math.sin(a1)
         );
         vertices.push(
-          (BELT_RADIUS + 2) * Math.cos(a2), 0,
+          (BELT_RADIUS + 2) * Math.cos(a2), Y_OFFSET,
           -(BELT_RADIUS + 2) * Math.sin(a2)
         );
       }
@@ -86,10 +88,12 @@ export class HighlightSystem {
       opacity: SECTOR_OPACITY,
       side: THREE.DoubleSide,
       depthWrite: false,
+      depthTest: false,
     });
 
     const sector = new THREE.Mesh(geometry, material);
     sector.name = 'sector-highlight';
+    sector.renderOrder = 1; // Render after belt
     this.objects.push(sector);
     this.group.add(sector);
 
@@ -99,13 +103,14 @@ export class HighlightSystem {
       const angle = startRad + (endRad - startRad) * (i / segments);
       arcPoints.push(new THREE.Vector3(
         (BELT_RADIUS + 2) * Math.cos(angle),
-        0,
+        Y_OFFSET,
         -(BELT_RADIUS + 2) * Math.sin(angle)
       ));
     }
     const arcGeom = new THREE.BufferGeometry().setFromPoints(arcPoints);
     const arcMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.6 });
     const arcLine = new THREE.Line(arcGeom, arcMat);
+    arcLine.renderOrder = 2;
     this.objects.push(arcLine);
     this.group.add(arcLine);
 
@@ -113,11 +118,12 @@ export class HighlightSystem {
     for (const angle of [startRad, endRad]) {
       const lineGeom = new THREE.BufferGeometry();
       lineGeom.setAttribute('position', new THREE.Float32BufferAttribute([
-        0, 0, 0,
-        (BELT_RADIUS + 2) * Math.cos(angle), 0, -(BELT_RADIUS + 2) * Math.sin(angle),
+        0, Y_OFFSET, 0,
+        (BELT_RADIUS + 2) * Math.cos(angle), Y_OFFSET, -(BELT_RADIUS + 2) * Math.sin(angle),
       ], 3));
       const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.3 });
       const line = new THREE.Line(lineGeom, lineMat);
+      line.renderOrder = 2;
       this.objects.push(line);
       this.group.add(line);
     }

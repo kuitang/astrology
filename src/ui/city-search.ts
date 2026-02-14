@@ -27,35 +27,50 @@ export function createCitySearch(
 ): HTMLElement {
   const container = document.createElement('div');
   container.style.cssText = `
-    position: absolute;
-    top: 60px; left: 12px;
     pointer-events: auto;
-    width: 260px;
+    position: relative;
   `;
 
   const input = document.createElement('input');
   input.type = 'text';
-  input.placeholder = 'Search city...';
+  input.placeholder = '\u{1F50D} Search city...';
   input.dataset.testid = 'city-search';
   input.style.cssText = `
-    width: 100%;
-    background: rgba(0,0,0,0.75);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
+    width: 170px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
     color: #fff;
-    padding: 8px 12px;
-    font-size: 14px;
-    backdrop-filter: blur(8px);
+    padding: 6px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
   `;
+  input.addEventListener('focus', () => {
+    input.style.borderColor = 'rgba(68, 136, 255, 0.6)';
+  });
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      input.style.borderColor = 'rgba(255,255,255,0.3)';
+      dropdown.style.display = 'none';
+    }, 200);
+  });
 
   const dropdown = document.createElement('div');
   dropdown.style.cssText = `
-    background: rgba(0,0,0,0.9);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 20, 0.95);
     border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 6px 6px;
     max-height: 200px;
     overflow-y: auto;
     display: none;
+    backdrop-filter: blur(12px);
+    z-index: 100;
   `;
 
   let debounceTimer: ReturnType<typeof setTimeout>;
@@ -84,14 +99,15 @@ export function createCitySearch(
         const item = document.createElement('div');
         item.dataset.testid = 'city-suggestion';
         item.style.cssText = `
-          padding: 8px 12px;
+          padding: 6px 10px;
           cursor: pointer;
           font-size: 13px;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          transition: background 0.15s;
         `;
         item.textContent = `${city.n}, ${city.c}`;
         item.addEventListener('mouseenter', () => {
-          item.style.background = 'rgba(255,255,255,0.1)';
+          item.style.background = 'rgba(68, 136, 255, 0.15)';
         });
         item.addEventListener('mouseleave', () => {
           item.style.background = 'transparent';

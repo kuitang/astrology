@@ -1,34 +1,45 @@
 import * as THREE from 'three';
 
-export function createStarfield(): THREE.Points {
-  // Generate random starfield (later replace with HYG catalog)
-  const count = 5000;
+interface StarData {
+  ra: number;   // right ascension in hours
+  dec: number;  // declination in degrees
+  mag: number;  // apparent magnitude
+  r: number;    // color red component
+  g: number;    // color green component
+  b: number;    // color blue component
+  sz: number;   // display size
+}
+
+/** Create a starfield from the HYG catalog data (loaded async) */
+export async function createStarfield(): Promise<THREE.Points> {
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const resp = await fetch(`${baseUrl}data/stars-hyg.json`);
+  const stars: StarData[] = await resp.json();
+
+  const count = stars.length;
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
-  const sizes = new Float32Array(count);
+
+  const FAR_RADIUS = 200;
 
   for (let i = 0; i < count; i++) {
-    // Random position on far sphere
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    const r = 200;
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
+    const star = stars[i]!;
+    // Convert RA/Dec to cartesian on a far sphere
+    const raRad = star.ra * (Math.PI / 12); // hours to radians
+    const decRad = star.dec * (Math.PI / 180);
 
-    // Slight color variation (warm white to cool white)
-    const temp = 0.7 + Math.random() * 0.3;
-    colors[i * 3] = temp;
-    colors[i * 3 + 1] = temp;
-    colors[i * 3 + 2] = 0.8 + Math.random() * 0.2;
+    positions[i * 3]     = FAR_RADIUS * Math.cos(decRad) * Math.cos(raRad);
+    positions[i * 3 + 1] = FAR_RADIUS * Math.sin(decRad);
+    positions[i * 3 + 2] = -FAR_RADIUS * Math.cos(decRad) * Math.sin(raRad);
 
-    sizes[i] = 0.5 + Math.random() * 1.5;
+    colors[i * 3]     = star.r;
+    colors[i * 3 + 1] = star.g;
+    colors[i * 3 + 2] = star.b;
   }
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
   const material = new THREE.PointsMaterial({
     size: 0.5,

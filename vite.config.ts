@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-  base: '/astrology/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/astrology/' : '/',
   build: {
     target: 'es2020',
     rollupOptions: {
@@ -13,4 +13,8 @@ export default defineConfig({
       },
     },
   },
-});
+  test: {
+    // Only include unit tests, not Playwright E2E specs
+    include: ['tests/unit/**/*.test.ts'],
+  },
+}));

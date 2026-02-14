@@ -11,6 +11,7 @@ export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   renderer.setPixelRatio(getDevicePixelRatio());
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
+  renderer.domElement.style.touchAction = 'none';
   container.appendChild(renderer.domElement);
 
   const onResize = () => {
