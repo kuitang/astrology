@@ -47,12 +47,8 @@ test.describe('Sign click targets', () => {
         return { error: `THREE=${!!T} APP=${!!app}`, data: null };
       }
 
-      // Get camera from the renderer
       const scene = app.scene.scene;
-      let camera: any = null;
-      scene.traverse((obj: any) => {
-        if (obj.isPerspectiveCamera && !camera) camera = obj;
-      });
+      const camera = app.cameraObj;
       const zodiacBelt = app.scene.zodiacBelt;
       if (!camera || !zodiacBelt) {
         return { error: `camera=${!!camera} belt=${!!zodiacBelt}`, data: null };

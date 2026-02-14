@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { SelectedObject, PlanetPosition, PlanetId } from '../types/astro.js';
+import type { SelectedObject, PlanetPosition, PlanetId, HouseCusps } from '../types/astro.js';
 import { ZODIAC_SIGNS, ELEMENT_COLORS } from '../data/zodiac-signs.js';
 import { PLANET_MAP } from '../data/planet-metadata.js';
 import { degreesToRadians, eclipticToCartesian } from '../utils/math.js';
@@ -31,7 +31,7 @@ export class HighlightSystem {
     this.objects = [];
   }
 
-  update(selected: SelectedObject | null, positions?: Map<PlanetId, PlanetPosition>): void {
+  update(selected: SelectedObject | null, positions?: Map<PlanetId, PlanetPosition>, houses?: HouseCusps | null): void {
     this.clear();
     if (!selected) return;
 
@@ -46,6 +46,9 @@ export class HighlightSystem {
         // Draw projection line from planet to sign belt
         this.drawProjectionLine(pos);
       }
+    } else if (selected.type === 'rising' && houses) {
+      const ascSignIndex = Math.floor(houses.ascendant / 30) % 12;
+      this.drawSectorWedge(ascSignIndex);
     }
   }
 

@@ -36,13 +36,14 @@ export function createCitySearch(
   input.placeholder = '\u{1F50D} Search city...';
   input.dataset.testid = 'city-search';
   input.style.cssText = `
-    width: 170px;
+    width: 180px;
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 6px;
     color: #fff;
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 10px 12px;
+    font-size: 14px;
+    min-height: 44px;
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
@@ -99,9 +100,12 @@ export function createCitySearch(
         const item = document.createElement('div');
         item.dataset.testid = 'city-suggestion';
         item.style.cssText = `
-          padding: 6px 10px;
+          padding: 10px 12px;
           cursor: pointer;
-          font-size: 13px;
+          font-size: 14px;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
           border-bottom: 1px solid rgba(255,255,255,0.06);
           transition: background 0.15s;
         `;

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createEarth } from './earth.js';
+import { createEarth, createPolaris } from './earth.js';
 import { createStarfield } from './starfield.js';
 import { createZodiacBelt } from './zodiac-belt.js';
 import { createConstellations } from './constellations.js';
@@ -17,7 +17,9 @@ export interface SceneComponents {
   planetVisuals: PlanetVisuals;
   houseVisuals: HouseVisuals;
   highlightSystem: HighlightSystem;
-  earth: THREE.Mesh;
+  earth: THREE.Group;
+  polarisGroup: THREE.Group;
+  ascGroup: THREE.Group;
 }
 
 export function buildScene(): SceneComponents {
@@ -56,6 +58,7 @@ export function buildScene(): SceneComponents {
   // Houses
   const houseVisuals = new HouseVisuals();
   eclipticGroup.add(houseVisuals.group);
+  eclipticGroup.add(houseVisuals.ascGroup);
 
   // Highlight system
   const highlightSystem = new HighlightSystem();
@@ -64,6 +67,10 @@ export function buildScene(): SceneComponents {
   // Earth at center
   const earth = createEarth();
   scene.add(earth);
+
+  // Polaris (clickable north star)
+  const polarisGroup = createPolaris();
+  scene.add(polarisGroup);
 
   return {
     scene,
@@ -74,5 +81,7 @@ export function buildScene(): SceneComponents {
     houseVisuals,
     highlightSystem,
     earth,
+    polarisGroup,
+    ascGroup: houseVisuals.ascGroup,
   };
 }

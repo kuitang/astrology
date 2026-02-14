@@ -51,14 +51,7 @@ export function createTimeScrubber(
     text-align: center;
   `;
 
-  function updateClock() {
-    const now = new Date();
-    const h = now.getHours().toString().padStart(2, '0');
-    const m = now.getMinutes().toString().padStart(2, '0');
-    todayBtn.innerHTML = `Now<br><span style="font-size:10px;opacity:0.7">${h}:${m}</span>`;
-  }
-  updateClock();
-  setInterval(updateClock, 60000);
+  todayBtn.textContent = 'Now';
 
   todayBtn.addEventListener('mouseenter', () => {
     todayBtn.style.background = 'rgba(68,136,255,0.3)';

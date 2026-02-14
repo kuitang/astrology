@@ -40,10 +40,19 @@ test('canvas fills viewport', async ({ page }) => {
 test('planet positions update when date changes', async ({ page }) => {
   await page.goto('/');
   await waitForRender(page);
+  // Use setNatalChart to prevent auto-update overwriting the date
+  await page.evaluate(() => (window as any).__APP__.setNatalChart({
+    year: 2000, month: 1, day: 1, hour: 12, minute: 0,
+    lat: 40.7, lng: -74.0, timezone: 'America/New_York'
+  }));
+  await page.waitForTimeout(200);
   const lon1 = await page.evaluate(
     () => (window as any).__APP__.store.getState().planetPositions.get('Sun').longitude
   );
-  await page.evaluate(() => (window as any).__APP__.setDate(2020, 6, 21, 12, 0));
+  await page.evaluate(() => (window as any).__APP__.setNatalChart({
+    year: 2020, month: 6, day: 21, hour: 12, minute: 0,
+    lat: 40.7, lng: -74.0, timezone: 'America/New_York'
+  }));
   await page.waitForTimeout(200);
   const lon2 = await page.evaluate(
     () => (window as any).__APP__.store.getState().planetPositions.get('Sun').longitude

@@ -10,7 +10,7 @@ import { buildScene } from './scene/scene-graph.js';
 import { createComposer } from './scene/postprocessing.js';
 import { Interaction } from './scene/interaction.js';
 import { AnimationLoop } from './scene/animation.js';
-import { createOverlay } from './ui/overlay.js';
+import { createOverlay, showWelcomeInPanel } from './ui/overlay.js';
 import { createDateTimePicker } from './ui/datetime-picker.js';
 import { createCitySearch } from './ui/city-search.js';
 import { createTimeScrubber } from './ui/time-scrubber.js';
@@ -34,7 +34,7 @@ export class App {
     const controls = createControls(this.camera, this.renderer.domElement);
 
     this.sceneComponents = buildScene();
-    const { scene, planetVisuals, houseVisuals, highlightSystem } = this.sceneComponents;
+    const { scene, planetVisuals, houseVisuals, highlightSystem, ascGroup, polarisGroup } = this.sceneComponents;
 
     const composer = createComposer(this.renderer, scene, this.camera);
     this.animLoop = new AnimationLoop(composer, controls);
@@ -44,9 +44,11 @@ export class App {
       store.setState({ selectedObject: obj });
     });
     interaction.setTargets([
+      ascGroup,
       planetVisuals.group,
       this.sceneComponents.zodiacBelt,
       this.sceneComponents.constellationGroup,
+      polarisGroup,
     ]);
 
     // UI
@@ -106,9 +108,10 @@ export class App {
     });
 
     store.subscribe('selectedObject', (selected) => {
-      highlightSystem.update(selected, store.getState().planetPositions);
+      const s = store.getState();
+      highlightSystem.update(selected, s.planetPositions, s.houses);
       this.handleSelection(selected);
-      updateInfoPanel(this.infoPanel, store.getState());
+      updateInfoPanel(this.infoPanel, s);
     });
 
     // Initial calculation
@@ -117,12 +120,15 @@ export class App {
     // Start render loop
     this.animLoop.start();
 
-    // Auto-update every 60 seconds
+    // Auto-update every second (planets move, clock ticks)
     setInterval(() => {
       if (!store.getState().natalMode) {
         store.setState({ date: new Date() });
       }
-    }, 60000);
+    }, 1000);
+
+    // Welcome message in the info panel (dismissed on first selection)
+    showWelcomeInPanel(this.infoPanel);
 
     // Mark ready
     store.setState({ loading: false, ready: true });
@@ -188,4 +194,5 @@ export class App {
 
   get store() { return store; }
   get scene() { return this.sceneComponents; }
+  get cameraObj() { return this.camera; }
 }

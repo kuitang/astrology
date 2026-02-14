@@ -3,28 +3,14 @@ import { ZODIAC_SIGNS } from '../data/zodiac-signs.js';
 import { PLANET_MAP } from '../data/planet-metadata.js';
 import { getDignity, DIGNITY_LABELS, DIGNITY_COLORS } from '../data/dignities.js';
 import { ZODIAC_CONSTELLATIONS } from '../scene/constellations.js';
+import { getInterpretation, getRisingInterpretation, PLANETARY_PERIODS } from '../data/interpretations.js';
 import { formatDegrees } from '../utils/math.js';
-import { isMobile } from '../utils/responsive.js';
 
 export function createInfoPanel(): HTMLElement {
   const panel = document.createElement('div');
   panel.id = 'info-panel';
   panel.dataset.testid = 'info-panel';
-  panel.style.cssText = `
-    position: absolute;
-    ${isMobile() ? 'bottom: 0; left: 0; right: 0; max-height: 50vh;' : 'top: 60px; right: 12px; width: 300px; max-height: 70vh;'}
-    pointer-events: auto;
-    background: rgba(0,0,0,0.8);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: ${isMobile() ? '16px 16px 0 0' : '8px'};
-    padding: 16px;
-    backdrop-filter: blur(8px);
-    display: none;
-    overflow-y: auto;
-    font-size: 14px;
-    line-height: 1.5;
-  `;
-
+  // All styling handled by CSS in index.html with @media queries
   return panel;
 }
 
@@ -43,6 +29,10 @@ export function updateInfoPanel(panel: HTMLElement, state: AppState): void {
     renderSignInfo(panel, selected, state);
   } else if (selected.type === 'constellation') {
     renderConstellationInfo(panel, selected);
+  } else if (selected.type === 'rising') {
+    renderRisingInfo(panel, state);
+  } else if (selected.type === 'polaris') {
+    renderPolarisInfo(panel);
   }
 }
 
@@ -55,6 +45,8 @@ function renderPlanetInfo(panel: HTMLElement, selected: SelectedObject, state: A
   if (!sign) return;
   const dignity = getDignity(pos.id, pos.signIndex);
   const dignityColor = DIGNITY_COLORS[dignity];
+  const interp = getInterpretation(meta.name, sign.name);
+  const period = PLANETARY_PERIODS[meta.name];
 
   panel.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
@@ -78,18 +70,21 @@ function renderPlanetInfo(panel: HTMLElement, selected: SelectedObject, state: A
       <span style="color:#aaa">Dignity:</span>
       <span style="color:${dignityColor};font-weight:bold">${DIGNITY_LABELS[dignity]}</span>
     </div>
-    <div style="margin-bottom:8px;">
-      <span style="color:#aaa">Distance:</span> ${pos.distance.toFixed(1)} AU
-    </div>
     ${state.currentTransit ? `
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);">
-      <div style="font-weight:bold;margin-bottom:6px;color:#4488ff;">Transit</div>
-      <div style="margin-bottom:4px;">
-        ${sign.glyph} <strong>${sign.name}</strong>
-      </div>
-      <div style="font-size:13px;color:#aaa;">
-        ${formatTransitDate(state.currentTransit.startDate)} — ${formatTransitDate(state.currentTransit.endDate)}
-      </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Transit:</span>
+      <span style="font-size:13px;">${formatTransitDate(state.currentTransit.startDate)} — ${formatTransitDate(state.currentTransit.endDate)}</span>
+    </div>
+    ` : ''}
+    ${period ? `
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Period:</span> ${period.siderealPeriod}
+      <span style="color:#888;font-size:12px">(${period.signDuration}/sign)</span>
+    </div>
+    ` : ''}
+    ${interp ? `
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15);">
+      <div style="font-size:13px;line-height:1.5;color:#ccc;">${interp.brief}</div>
     </div>
     ` : ''}
   `;
@@ -131,6 +126,55 @@ function renderSignInfo(panel: HTMLElement, selected: SelectedObject, state: App
     <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);">
       <div style="font-weight:bold;margin-bottom:6px;color:#4488ff;">Planets in ${sign.name}</div>
       ${planetsInSign.map(p => `<div style="margin-bottom:2px;">${p}</div>`).join('')}
+    </div>
+    ` : ''}
+  `;
+}
+
+function renderRisingInfo(panel: HTMLElement, state: AppState): void {
+  const houses = state.houses;
+  if (!houses) {
+    panel.innerHTML = `
+      <div style="font-size:18px;font-weight:bold;margin-bottom:12px;color:#ff4444;">Rising Sign (Ascendant)</div>
+      <div style="color:#aaa;">Set a city to calculate your Rising sign.</div>
+    `;
+    return;
+  }
+
+  const ascDeg = houses.ascendant;
+  const signIndex = Math.floor(ascDeg / 30) % 12;
+  const sign = ZODIAC_SIGNS[signIndex];
+  if (!sign) return;
+  const signDegree = ascDeg % 30;
+  const interp = getRisingInterpretation(sign.name);
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:28px;color:#ff4444;">↑</span>
+      <span style="font-size:20px;font-weight:bold;color:#ff4444;">Rising Sign</span>
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Ascendant:</span>
+      ${sign.glyph} <strong>${sign.name}</strong> ${formatDegrees(signDegree)}
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Ecliptic:</span>
+      <strong>${formatDegrees(ascDeg)}</strong>
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Element:</span> ${sign.element.charAt(0).toUpperCase() + sign.element.slice(1)}
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Chart ruler:</span> ${sign.ruler}
+    </div>
+    <div style="padding:8px 0;color:#999;font-size:13px;line-height:1.5;">
+      The Ascendant is the degree of the ecliptic rising on the eastern horizon.
+      In Hellenistic astrology, this is the most important point in the chart —
+      it determines the ruler of the entire nativity.
+    </div>
+    ${interp ? `
+    <div style="padding-top:10px;border-top:1px solid rgba(255,255,255,0.15);">
+      <div style="font-size:13px;line-height:1.5;color:#ccc;">${interp.brief}</div>
     </div>
     ` : ''}
   `;
@@ -190,13 +234,59 @@ function renderConstellationInfo(panel: HTMLElement, selected: SelectedObject): 
       </div>
     </div>
 
-    <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);color:#999;font-size:13px;line-height:1.6;">
-      <strong>Why the difference?</strong> Earth's axis wobbles in a ~26,000-year cycle called the
-      <em>precession of the equinoxes</em>. Western tropical astrology fixes the signs to the seasons
-      (0° Aries = March equinox), while the constellations slowly drift. Today the gap is about 24°.
-      This orrery shows both: the <span style="color:#ffaa44;">sign divisions</span> are the
-      astrological framework, and the <span style="color:#aaddff;">constellation figures</span> show
-      where the stars actually are.
+    <div style="padding-top:12px;border-top:1px solid rgba(255,255,255,0.15);">
+      <details style="color:#999;font-size:13px;line-height:1.6;">
+        <summary style="cursor:pointer;color:#aaa;">Why the difference?</summary>
+        <div style="margin-top:6px;">
+          Earth's axis wobbles in a ~26,000-year cycle called the
+          <em>precession of the equinoxes</em>. Western tropical astrology fixes the signs to the seasons
+          (0° Aries = March equinox), while the constellations slowly drift. Today the gap is about 24°.
+          This orrery shows both: the <span style="color:#ffaa44;">sign divisions</span> are the
+          astrological framework, and the <span style="color:#aaddff;">constellation figures</span> show
+          where the stars actually are.
+        </div>
+      </details>
     </div>
+  `;
+}
+
+function renderPolarisInfo(panel: HTMLElement): void {
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:28px;color:#ffffcc;">&#x2B50;</span>
+      <span style="font-size:20px;font-weight:bold;color:#ffffcc;">Polaris</span>
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Also known as:</span> The North Star, Alpha Ursae Minoris
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Declination:</span> +89° 15' 51" (nearly at the celestial north pole)
+    </div>
+    <div style="margin-bottom:8px;">
+      <span style="color:#aaa">Apparent magnitude:</span> 1.98 (visible to the naked eye)
+    </div>
+    <div style="padding:8px 0;color:#ccc;font-size:13px;line-height:1.6;">
+      Polaris sits less than 1° from the north celestial pole — the point in the sky directly
+      above Earth's north pole. As Earth rotates, all stars appear to circle around this point,
+      but Polaris barely moves. This makes it the anchor of the night sky.
+    </div>
+    <div style="padding-top:10px;border-top:1px solid rgba(255,255,255,0.15);">
+      <div style="font-weight:bold;color:#88ccff;margin-bottom:6px;">Orientation</div>
+      <div style="font-size:13px;line-height:1.6;color:#ccc;">
+        The dashed line from Earth's axis to Polaris shows the direction of celestial north.
+        The arrow around the north pole shows Earth's rotation direction (west → east,
+        counterclockwise when viewed from above). All stars, the Sun, Moon, and planets
+        appear to rise in the east and set in the west — the opposite of Earth's rotation —
+        because we are rotating underneath them.
+      </div>
+    </div>
+    <details style="margin-top:10px;color:#999;font-size:13px;line-height:1.6;">
+      <summary style="cursor:pointer;color:#aaa;">Why Polaris isn't permanent</summary>
+      <div style="margin-top:6px;">
+        Due to precession, Earth's axis slowly traces a circle in the sky over ~26,000 years.
+        Polaris is our current north star, but around 3000 BCE it was Thuban (Alpha Draconis),
+        and in ~13,000 years it will be Vega. Polaris is closest to the true pole around 2100 CE.
+      </div>
+    </details>
   `;
 }

@@ -29,7 +29,7 @@ export interface TransitEvent {
 export type DignityType = 'domicile' | 'exaltation' | 'detriment' | 'fall' | 'peregrine';
 
 export interface SelectedObject {
-  type: 'planet' | 'sign' | 'constellation';
+  type: 'planet' | 'sign' | 'constellation' | 'rising' | 'polaris';
   id: string;
 }
 

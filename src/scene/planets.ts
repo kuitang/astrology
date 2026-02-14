@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import type { PlanetId, PlanetPosition } from '../types/astro.js';
 import { PLANETS, PLANET_MAP } from '../data/planet-metadata.js';
 import { eclipticToCartesian } from '../utils/math.js';
-import { isMobile } from '../utils/responsive.js';
 
 /** Create a procedural planet texture with color variation */
 function createPlanetTexture(baseColor: number, name: string): THREE.Texture {
@@ -77,7 +76,6 @@ export class PlanetVisuals {
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'planetGroup';
-    const mobile = isMobile();
 
     // Shared arrowhead geometry (reused for all planets)
     const arrowGeom = new THREE.ConeGeometry(0.2, 0.5, 6);
@@ -102,7 +100,7 @@ export class PlanetVisuals {
 
       // Invisible hit cylinder from planet radius out toward the belt (radius 25)
       // Stops before the belt to avoid blocking constellation clicks behind it
-      const hitRadius = mobile ? 1.5 : 1.0;
+      const hitRadius = 1.5;
       const hitLength = Math.max(2, 24 - meta.orbitRadius);
       const hitGeom = new THREE.CylinderGeometry(hitRadius, hitRadius, hitLength, 8);
       hitGeom.rotateZ(Math.PI / 2);
@@ -143,10 +141,10 @@ export class PlanetVisuals {
       this.arrowheads.set(meta.id, arrow);
       this.group.add(arrow);
 
-      // Glyph label — bigger on mobile
-      const canvasSize = mobile ? 128 : 64;
-      const fontSize = mobile ? 96 : 48;
-      const spriteScale = mobile ? 3.5 : 1.8;
+      // Glyph label — use larger size for all devices (touch-friendly)
+      const canvasSize = 128;
+      const fontSize = 96;
+      const spriteScale = 3.0;
 
       const canvas = document.createElement('canvas');
       canvas.width = canvasSize;

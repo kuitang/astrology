@@ -44,17 +44,17 @@ function createCircleTexture(): THREE.Texture {
   const ctx = canvas.getContext('2d')!;
 
   const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  gradient.addColorStop(0, 'rgba(170, 220, 255, 1.0)');
-  gradient.addColorStop(0.3, 'rgba(170, 220, 255, 0.8)');
-  gradient.addColorStop(0.6, 'rgba(100, 160, 220, 0.3)');
-  gradient.addColorStop(1, 'rgba(100, 160, 220, 0)');
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+  gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+  gradient.addColorStop(0.6, 'rgba(200, 200, 200, 0.3)');
+  gradient.addColorStop(1, 'rgba(200, 200, 200, 0)');
 
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(220, 240, 255, 1)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 1)';
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, size * 0.15, 0, Math.PI * 2);
   ctx.fill();
@@ -80,15 +80,15 @@ export function createConstellations(): THREE.Group {
 
   // Shared materials for all constellations (avoid duplicate draw calls)
   const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0x3366aa,
+    color: 0xffffff,
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.2,
   });
   const starSpriteMat = new THREE.SpriteMaterial({
     map: circleTexture,
     transparent: true,
-    opacity: 0.9,
-    color: 0xaaddff,
+    opacity: 0.85,
+    color: 0xffffff,
     sizeAttenuation: true,
   });
   const hitGeom = new THREE.SphereGeometry(5, 8, 8);

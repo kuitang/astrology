@@ -12,6 +12,32 @@
       html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, sans-serif; color: #fff; position: fixed; touch-action: none; }
       #app { width: 100%; height: 100%; position: fixed; top: 0; left: 0; }
       canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+      /* Info panel — responsive layout */
+      #info-panel {
+        position: absolute;
+        pointer-events: auto;
+        background: rgba(0,0,0,0.8);
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 16px;
+        backdrop-filter: blur(8px);
+        display: none;
+        overflow-y: auto;
+        font-size: 14px;
+        line-height: 1.5;
+        /* Desktop default */
+        top: 60px; right: 12px;
+        width: 300px; max-height: 70vh;
+        border-radius: 8px;
+      }
+      @media (max-width: 767px) {
+        #info-panel {
+          top: auto; right: auto;
+          bottom: 0; left: 0;
+          width: 100%; max-height: 50vh;
+          border-radius: 16px 16px 0 0;
+        }
+      }
     </style>
   </head>
   <body>

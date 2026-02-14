@@ -50,13 +50,18 @@ export class Interaction {
     // Raycast only against registered targets (planets, zodiac belt, constellations)
     const intersects = this.raycaster.intersectObjects(this.raycastTargets, true);
 
-    // Priority: planets first, then signs, then constellations
+    // Priority: rising > planets > signs > constellations > polaris
+    let risingHit: SelectedObject | null = null;
     let planetHit: SelectedObject | null = null;
     let signHit: SelectedObject | null = null;
     let constellationHit: SelectedObject | null = null;
+    let polarisHit: SelectedObject | null = null;
 
     for (const hit of intersects) {
       const obj = hit.object;
+      if (!risingHit && obj.userData?.type === 'rising') {
+        risingHit = { type: 'rising', id: 'ascendant' };
+      }
       if (!planetHit && obj.userData?.type === 'planet') {
         planetHit = { type: 'planet', id: obj.userData.planetId as string };
       }
@@ -66,10 +71,12 @@ export class Interaction {
       if (!constellationHit && obj.userData?.type === 'constellation') {
         constellationHit = { type: 'constellation', id: obj.userData.name as string };
       }
+      if (!polarisHit && obj.userData?.type === 'polaris') {
+        polarisHit = { type: 'polaris', id: 'polaris' };
+      }
     }
 
-    // Planets take priority over signs over constellations
-    const result = planetHit ?? signHit ?? constellationHit;
+    const result = risingHit ?? planetHit ?? signHit ?? constellationHit ?? polarisHit;
     this.onSelect(result);
   }
 }

@@ -7,6 +7,6 @@ export async function waitForRender(page: Page): Promise<void> {
     null,
     { timeout: 30000 }
   );
-  // Extra frame for render to complete
-  await page.waitForTimeout(1000);
+  // Extra frames for render + HMR stability
+  await page.waitForTimeout(2000);
 }

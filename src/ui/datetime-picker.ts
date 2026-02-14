@@ -29,9 +29,10 @@ export function createDateTimePicker(
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 6px;
     color: #fff;
-    padding: 6px 10px;
-    font-size: 13px;
-    width: 180px;
+    padding: 10px 12px;
+    font-size: 14px;
+    min-height: 44px;
+    width: 190px;
     cursor: pointer;
     font-family: inherit;
   `;

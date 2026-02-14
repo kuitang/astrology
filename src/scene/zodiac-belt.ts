@@ -1,27 +1,25 @@
 import * as THREE from 'three';
 import { ZODIAC_SIGNS, ELEMENT_COLORS } from '../data/zodiac-signs.js';
 import { degreesToRadians } from '../utils/math.js';
-import { isMobile } from '../utils/responsive.js';
 
 const BELT_RADIUS = 25;
 
 /** Create a high-quality vector glyph canvas */
-function createGlyphCanvas(glyph: string, color: number, mobile: boolean): HTMLCanvasElement {
-  const size = mobile ? 256 : 128;
+function createGlyphCanvas(glyph: string, color: number): HTMLCanvasElement {
+  const size = 256;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
   const hex = `#${color.toString(16).padStart(6, '0')}`;
-  const fontSize = mobile ? size * 0.65 : size * 0.7;
+  const fontSize = size * 0.65;
 
-  // Glyph with outline (no background circle)
   ctx.font = `${fontSize}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-  ctx.lineWidth = mobile ? 5 : 3;
+  ctx.lineWidth = 5;
   ctx.strokeText(glyph, size / 2, size / 2);
   ctx.fillStyle = hex;
   ctx.fillText(glyph, size / 2, size / 2);
@@ -32,7 +30,6 @@ function createGlyphCanvas(glyph: string, color: number, mobile: boolean): HTMLC
 export function createZodiacBelt(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'zodiacBelt';
-  const mobile = isMobile();
 
   // Thin circle outline for the ecliptic path (replaces the colored torus)
   const eclipticCirclePoints: THREE.Vector3[] = [];
@@ -95,9 +92,9 @@ export function createZodiacBelt(): THREE.Group {
     // Sign glyph — high-quality vector label
     const labelAngle = degreesToRadians(sign.startDegree + 15);
     const labelR = BELT_RADIUS;
-    const spriteScale = mobile ? 4 : 2.8;
+    const spriteScale = 3.5;
 
-    const canvas = createGlyphCanvas(sign.glyph, elementColor, mobile);
+    const canvas = createGlyphCanvas(sign.glyph, elementColor);
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
