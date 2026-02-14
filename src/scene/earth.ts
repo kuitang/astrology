@@ -21,6 +21,7 @@ export function createEarth(): THREE.Group {
   loader.load(
     import.meta.env.BASE_URL + 'textures/earth-day.jpg',
     (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
       material.map = texture;
       material.color.set(0xffffff);
       material.needsUpdate = true;
@@ -180,7 +181,7 @@ export function createPolaris(): THREE.Group {
 
   // Clickable hit sphere at Polaris
   const hitGeom = new THREE.SphereGeometry(8, 8, 8);
-  const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide });
+  const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
   const hitMesh = new THREE.Mesh(hitGeom, hitMat);
   hitMesh.position.set(x, y, z);
   hitMesh.name = 'polaris-hit';
@@ -212,7 +213,7 @@ export function createPolaris(): THREE.Group {
   const midY = (AXIS_TIP_Y + y) / 2;
   const midZ = z / 2;
   const hitCylGeom = new THREE.CylinderGeometry(4, 4, lineLen, 6);
-  const hitCylMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
+  const hitCylMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
   const hitCyl = new THREE.Mesh(hitCylGeom, hitCylMat);
   hitCyl.position.set(midX, midY, midZ);
   hitCyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), lineDir);

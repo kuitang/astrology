@@ -103,7 +103,14 @@ export class PlanetVisuals {
       loader.load(
         import.meta.env.BASE_URL + 'textures/planets/' + meta.id.toLowerCase() + '.jpg',
         (realTexture) => {
+          realTexture.colorSpace = THREE.SRGBColorSpace;
           material.map = realTexture;
+          // Reduce emissive so real texture is visible (procedural needed it brighter)
+          if (meta.id === 'Moon') {
+            material.emissiveIntensity = 0.3;
+          } else if (meta.id === 'Sun') {
+            material.emissiveIntensity = 0.5;
+          }
           material.needsUpdate = true;
         },
         undefined,
@@ -122,6 +129,7 @@ export class PlanetVisuals {
         transparent: true,
         opacity: 0,
         side: THREE.DoubleSide,
+        depthWrite: false,
       });
       const hitCyl = new THREE.Mesh(hitGeom, hitMat);
       hitCyl.name = `planet-hit-${meta.id}`;

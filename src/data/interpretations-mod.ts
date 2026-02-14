@@ -1,25 +1,4 @@
-export interface Interpretation {
-  brief: string;
-  keywords: string[];
-}
-
-export interface PlanetaryPeriod {
-  siderealPeriod: string;
-  signDuration: string;
-}
-
-export const PLANETARY_PERIODS: Record<string, PlanetaryPeriod> = {
-  Sun:     { siderealPeriod: '1 year',       signDuration: '~30 days' },
-  Moon:    { siderealPeriod: '27.3 days',    signDuration: '~2.5 days' },
-  Mercury: { siderealPeriod: '88 days',      signDuration: '~14–30 days' },
-  Venus:   { siderealPeriod: '225 days',     signDuration: '~23–60 days' },
-  Mars:    { siderealPeriod: '1.88 years',   signDuration: '~6 weeks' },
-  Jupiter: { siderealPeriod: '11.86 years',  signDuration: '~1 year' },
-  Saturn:  { siderealPeriod: '29.46 years',  signDuration: '~2.5 years' },
-  Uranus:  { siderealPeriod: '84 years',     signDuration: '~7 years' },
-  Neptune: { siderealPeriod: '164.8 years',  signDuration: '~14 years' },
-  Pluto:   { siderealPeriod: '248 years',    signDuration: '~12–31 years' },
-};
+import type { Interpretation } from './interpretations.js';
 
 // prettier-ignore
 export const TRANSIT_INTERPRETATIONS: Record<string, Interpretation> = {
@@ -1372,16 +1351,3 @@ export const NATAL_INTERPRETATIONS: Record<string, Interpretation> = {
     keywords: ['ethereal', 'empathetic', 'imaginative', 'fluid'],
   },
 };
-
-/** Look up interpretation for a planet-sign combination */
-export function getInterpretation(planet: string, sign: string, natal = false): Interpretation | null {
-  const record = natal ? NATAL_INTERPRETATIONS : TRANSIT_INTERPRETATIONS;
-  const key = `${planet}-${sign}`;
-  return record[key] ?? null;
-}
-
-/** Look up interpretation for the Rising (Ascendant) sign */
-export function getRisingInterpretation(sign: string): Interpretation | null {
-  const key = `Rising-${sign}`;
-  return NATAL_INTERPRETATIONS[key] ?? null;
-}

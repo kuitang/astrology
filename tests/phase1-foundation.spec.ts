@@ -52,13 +52,13 @@ test('constellation stick figures visible', async ({ page }) => {
 test('date picker updates planet positions', async ({ page }) => {
   await page.goto('/');
   await waitForRender(page);
-  const before = await page.evaluate(
-    () => (window as any).__APP__.store.getState().planetPositions.get('Mars').longitude
-  );
-  await page.evaluate(() => (window as any).__APP__.setDate(1990, 6, 15, 12, 0));
-  await page.waitForTimeout(200);
-  const after = await page.evaluate(
-    () => (window as any).__APP__.store.getState().planetPositions.get('Mars').longitude
-  );
+  // Read before and set date + read after in same evaluate to avoid 1s auto-update race
+  const { before, after } = await page.evaluate(() => {
+    const app = (window as any).__APP__;
+    const before = app.store.getState().planetPositions.get('Mars').longitude;
+    app.setDate(1990, 6, 15, 12, 0);
+    const after = app.store.getState().planetPositions.get('Mars').longitude;
+    return { before, after };
+  });
   expect(before).not.toBeCloseTo(after, 0);
 });

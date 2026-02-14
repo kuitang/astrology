@@ -4,3 +4,8 @@ dist/
 .DS_Store
 tests/screenshots/
 test-results/
+*.png
+*.jpeg
+*.jpg
+.playwright-mcp/
+playwright-report/

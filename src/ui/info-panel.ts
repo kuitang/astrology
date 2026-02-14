@@ -1,10 +1,11 @@
-import type { AppState, SelectedObject } from '../types/astro.js';
+import type { AppState, SelectedObject, InterpretationStyle } from '../types/astro.js';
 import { ZODIAC_SIGNS } from '../data/zodiac-signs.js';
 import { PLANET_MAP } from '../data/planet-metadata.js';
 import { getDignity, DIGNITY_LABELS, DIGNITY_COLORS } from '../data/dignities.js';
 import { ZODIAC_CONSTELLATIONS } from '../scene/constellations.js';
 import { getInterpretation, getRisingInterpretation, PLANETARY_PERIODS } from '../data/interpretations.js';
 import { formatDegrees } from '../utils/math.js';
+import { store } from '../state/store.js';
 
 export function createInfoPanel(): HTMLElement {
   const panel = document.createElement('div');
@@ -63,7 +64,7 @@ function renderPlanetInfo(panel: HTMLElement, selected: SelectedObject, state: A
   if (!sign) return;
   const dignity = getDignity(pos.id, pos.signIndex);
   const dignityColor = DIGNITY_COLORS[dignity];
-  const interp = getInterpretation(meta.name, sign.name, state.natalMode);
+  const interp = getInterpretation(meta.name, sign.name, state.natalMode, state.interpretationStyle);
   const period = PLANETARY_PERIODS[meta.name];
   const colorHex = `#${meta.color.toString(16).padStart(6, '0')}`;
 
@@ -87,7 +88,8 @@ function renderPlanetInfo(panel: HTMLElement, selected: SelectedObject, state: A
 
   panel.innerHTML = header(meta.glyph, meta.name, colorHex)
     + grid(rows)
-    + (interp ? `<div class="interp-text">${interp.brief}</div>` : '');
+    + (interp ? styleToggle(state.interpretationStyle) + `<div class="interp-text">${interp.brief}</div>` : '');
+  attachStyleToggle(panel);
 }
 
 function renderSignInfo(panel: HTMLElement, selected: SelectedObject, state: AppState): void {
@@ -133,7 +135,7 @@ function renderRisingInfo(panel: HTMLElement, state: AppState): void {
   const sign = ZODIAC_SIGNS[signIndex];
   if (!sign) return;
   const signDegree = ascDeg % 30;
-  const interp = getRisingInterpretation(sign.name);
+  const interp = getRisingInterpretation(sign.name, state.interpretationStyle);
 
   panel.innerHTML = header('↑', 'Rising Sign', '#ff4444')
     + grid([
@@ -143,7 +145,8 @@ function renderRisingInfo(panel: HTMLElement, state: AppState): void {
       ['Chart ruler', sign.ruler],
     ])
     + `<div class="interp-text" style="color:#999">The Ascendant — the ecliptic degree rising on the eastern horizon — determines the ruler of the entire nativity.</div>`
-    + (interp ? `<div class="interp-text">${interp.brief}</div>` : '');
+    + (interp ? styleToggle(state.interpretationStyle) + `<div class="interp-text">${interp.brief}</div>` : '');
+  attachStyleToggle(panel);
 }
 
 function renderConstellationInfo(panel: HTMLElement, selected: SelectedObject): void {
@@ -157,13 +160,14 @@ function renderConstellationInfo(panel: HTMLElement, selected: SelectedObject): 
   if (realSpan < 0) realSpan += 360;
   const offset = con.extent[0] - con.conventionalRange[0];
 
+  const signRange = `${con.conventionalRange[0].toFixed(0)}°–${(con.conventionalRange[1] % 360).toFixed(0)}°`;
   panel.innerHTML = header('', con.name, '#aaddff')
-    + grid([
-      ['Ecliptic extent', `<strong>${con.extent[0].toFixed(1)}° — ${con.extent[1].toFixed(1)}°</strong>`],
-      ['Angular width', `<strong>${realSpan.toFixed(1)}°</strong>`],
-      ['Sign', `${con.conventionalSign} (${con.conventionalRange[0].toFixed(0)}°–${(con.conventionalRange[1] % 360).toFixed(0)}°, 30° fixed)`],
-      ['Precession offset', `<strong>~${Math.abs(offset).toFixed(1)}°</strong> ${offset > 0 ? 'ahead' : 'behind'}`],
-    ])
+    + `<div class="info-cards">
+      <div><div class="card-label">Ecliptic extent</div><div class="card-value">${con.extent[0].toFixed(1)}° — ${con.extent[1].toFixed(1)}°</div></div>
+      <div><div class="card-label">Angular width</div><div class="card-value">${realSpan.toFixed(1)}°</div></div>
+      <div><div class="card-label">Sign</div><div class="card-value">${con.conventionalSign} (${signRange})</div></div>
+      <div><div class="card-label">Precession offset</div><div class="card-value">~${Math.abs(offset).toFixed(1)}° ${offset > 0 ? 'ahead' : 'behind'}</div></div>
+    </div>`
     + `<details><summary>Why the difference?</summary>
       <div style="margin-top:4px;">
         Earth's axis wobbles in a ~26,000-year cycle (<em>precession of the equinoxes</em>).
@@ -194,6 +198,23 @@ function renderPolarisInfo(panel: HTMLElement): void {
         Our current north star was Thuban (α Dra) around 3000 BCE; in ~13,000 years it will be Vega.
       </div>
     </details>`;
+}
+
+function styleToggle(current: InterpretationStyle): string {
+  const tSel = current === 'traditional';
+  return `<div class="style-toggle" style="display:flex;gap:0;margin:6px 0 2px;border:1px solid rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;font-size:11px;">
+    <button data-style="traditional" style="flex:1;padding:3px 6px;border:none;cursor:pointer;background:${tSel ? 'rgba(255,255,255,0.15)' : 'transparent'};color:${tSel ? '#fff' : '#888'};">Traditional</button>
+    <button data-style="modern" style="flex:1;padding:3px 6px;border:none;border-left:1px solid rgba(255,255,255,0.15);cursor:pointer;background:${tSel ? 'transparent' : 'rgba(255,255,255,0.15)'};color:${tSel ? '#888' : '#fff'};">Modern</button>
+  </div>`;
+}
+
+function attachStyleToggle(panel: HTMLElement): void {
+  panel.querySelectorAll('.style-toggle button').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const style = (e.currentTarget as HTMLElement).dataset.style as InterpretationStyle;
+      store.setState({ interpretationStyle: style });
+    });
+  });
 }
 
 function fmtDate(date: Date): string {

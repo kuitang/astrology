@@ -65,25 +65,52 @@ export class HouseVisuals {
     this.group.visible = true;
     this.ascGroup.visible = true;
 
+    const CUSP_HEIGHT = 4; // vertical height of cusp planes
+
     for (let i = 0; i < 12; i++) {
       const cuspDeg = houses.cusps[i]!;
       const lonRad = degreesToRadians(cuspDeg);
 
-      const geometry = new THREE.BufferGeometry();
-      const points = [
-        0, 0, 0,
-        HOUSE_LINE_RADIUS * Math.cos(lonRad), 0, -HOUSE_LINE_RADIUS * Math.sin(lonRad),
-      ];
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
-
       const isAngle = i === 0 || i === 3 || i === 6 || i === 9;
-      const material = new THREE.LineBasicMaterial({
+      const outerX = HOUSE_LINE_RADIUS * Math.cos(lonRad);
+      const outerZ = -HOUSE_LINE_RADIUS * Math.sin(lonRad);
+
+      // Translucent vertical plane (triangle strip: bottom-top at origin + bottom-top at outer)
+      const planeGeom = new THREE.BufferGeometry();
+      const verts = new Float32Array([
+        0, -CUSP_HEIGHT / 2, 0,
+        0,  CUSP_HEIGHT / 2, 0,
+        outerX, -CUSP_HEIGHT / 2, outerZ,
+        outerX,  CUSP_HEIGHT / 2, outerZ,
+      ]);
+      const indices = [0, 1, 2, 1, 3, 2];
+      planeGeom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      planeGeom.setIndex(indices);
+
+      const planeMat = new THREE.MeshBasicMaterial({
+        color: isAngle ? 0xffaa00 : 0x555555,
+        transparent: true,
+        opacity: isAngle ? 0.15 : 0.06,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+
+      const plane = new THREE.Mesh(planeGeom, planeMat);
+      plane.name = `house-plane-${i + 1}`;
+      this.group.add(plane);
+
+      // Edge line on top of the plane for definition
+      const lineGeom = new THREE.BufferGeometry();
+      lineGeom.setAttribute('position', new THREE.Float32BufferAttribute([
+        0, 0, 0, outerX, 0, outerZ,
+      ], 3));
+      const lineMat = new THREE.LineBasicMaterial({
         color: isAngle ? 0xffaa00 : 0x555555,
         transparent: true,
         opacity: isAngle ? 0.8 : 0.4,
       });
 
-      const line = new THREE.Line(geometry, material);
+      const line = new THREE.Line(lineGeom, lineMat);
       line.name = `house-line-${i + 1}`;
       this.lines.push(line);
       this.group.add(line);
@@ -115,7 +142,7 @@ export class HouseVisuals {
     // Clickable ASC hit target — large sphere on the belt at ascendant
     const hitRadius = 3;
     const hitGeom = new THREE.SphereGeometry(hitRadius, 8, 8);
-    const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide });
+    const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
     this.ascHitMesh = new THREE.Mesh(hitGeom, hitMat);
     this.ascHitMesh.position.set(
       BELT_RADIUS * Math.cos(ascRad), 0, -BELT_RADIUS * Math.sin(ascRad)

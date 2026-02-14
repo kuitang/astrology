@@ -35,18 +35,20 @@ export function createCitySearch(
   input.type = 'text';
   input.placeholder = '\u{1F50D} Search city...';
   input.dataset.testid = 'city-search';
+  input.className = 'toolbar-city-input';
   input.style.cssText = `
-    width: 180px;
+    width: 100%;
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 6px;
     color: #fff;
-    padding: 10px 12px;
+    padding: 0 10px;
     font-size: 14px;
-    min-height: 44px;
+    height: 36px;
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
+    box-sizing: border-box;
   `;
   input.addEventListener('focus', () => {
     input.style.borderColor = 'rgba(68, 136, 255, 0.6)';

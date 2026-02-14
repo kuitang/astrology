@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#000008" />
     <meta name="description" content="3D geocentric orrery — explore natal charts, transits, and dignities" />
-    <link rel="manifest" href="/astrology/manifest.json" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <title>Astrology Orrery</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -41,6 +42,15 @@
       }
       #info-panel .info-grid dt { color: #888; font-size: 12px; white-space: nowrap; }
       #info-panel .info-grid dd { margin: 0; font-weight: 500; }
+      /* Label-above-value 2-column cards for constellation info */
+      #info-panel .info-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 12px;
+        margin-bottom: 8px;
+      }
+      #info-panel .info-cards .card-label { color: #888; font-size: 11px; }
+      #info-panel .info-cards .card-value { font-weight: 500; font-size: 13px; }
       #info-panel .interp-text { font-size: 12px; color: #bbb; line-height: 1.45; margin-top: 6px; }
       #info-panel details { margin-top: 6px; font-size: 12px; color: #999; }
       #info-panel details summary { cursor: pointer; color: #aaa; }
@@ -59,6 +69,12 @@
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(30px); }
           to   { opacity: 1; transform: translateY(0); }
+        }
+        /* Compact toolbar on mobile */
+        .app-toolbar .toolbar-date-input,
+        .app-toolbar .toolbar-city-input {
+          font-size: 13px !important;
+          height: 32px !important;
         }
       }
     </style>

@@ -26,18 +26,44 @@ export function createZodiacBelt(): THREE.Group {
   const eclipticLine = new THREE.Line(eclipticGeom, eclipticMat);
   group.add(eclipticLine);
 
+  const TICK_HEIGHT = 3;
+
   for (const sign of ZODIAC_SIGNS) {
     const startAngle = degreesToRadians(sign.startDegree);
+    const elementColor = ELEMENT_COLORS[sign.element];
 
-    // Thin radial tick mark at each sign boundary
+    // Translucent vertical plane at each sign boundary tick (local to belt edge)
     const inner = BELT_RADIUS - 1.5;
     const outer = BELT_RADIUS + 1.5;
+    const inX = inner * Math.cos(startAngle);
+    const inZ = -inner * Math.sin(startAngle);
+    const outX = outer * Math.cos(startAngle);
+    const outZ = -outer * Math.sin(startAngle);
+    const planeGeom = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      inX, -TICK_HEIGHT / 2, inZ,
+      inX,  TICK_HEIGHT / 2, inZ,
+      outX, -TICK_HEIGHT / 2, outZ,
+      outX,  TICK_HEIGHT / 2, outZ,
+    ]);
+    planeGeom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    planeGeom.setIndex([0, 1, 2, 1, 3, 2]);
+    const planeMat = new THREE.MeshBasicMaterial({
+      color: elementColor,
+      transparent: true,
+      opacity: 0.12,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const plane = new THREE.Mesh(planeGeom, planeMat);
+    plane.name = `sign-plane-${sign.name}`;
+    group.add(plane);
+
+    // Edge line on top of the plane for definition
     const tickGeom = new THREE.BufferGeometry();
     tickGeom.setAttribute('position', new THREE.Float32BufferAttribute([
-      inner * Math.cos(startAngle), 0, -inner * Math.sin(startAngle),
-      outer * Math.cos(startAngle), 0, -outer * Math.sin(startAngle),
+      inX, 0, inZ, outX, 0, outZ,
     ], 3));
-    const elementColor = ELEMENT_COLORS[sign.element];
     const tickMat = new THREE.LineBasicMaterial({
       color: elementColor,
       transparent: true,
@@ -61,6 +87,7 @@ export function createZodiacBelt(): THREE.Group {
       transparent: true,
       opacity: 0,
       side: THREE.DoubleSide,
+      depthWrite: false,
     });
     const selectMesh = new THREE.Mesh(selectGeom, selectMat);
     selectMesh.name = `sign-${sign.name}`;

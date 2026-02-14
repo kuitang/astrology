@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(({ command }) => ({
   base: '/', // Using custom domain astrology3d.app
+  server: {
+    allowedHosts: true,
+  },
   build: {
     target: 'es2020',
     rollupOptions: {

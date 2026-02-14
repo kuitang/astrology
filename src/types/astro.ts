@@ -33,6 +33,8 @@ export interface SelectedObject {
   id: string;
 }
 
+export type InterpretationStyle = 'traditional' | 'modern';
+
 export interface AppState {
   date: Date;
   latitude: number;
@@ -44,6 +46,7 @@ export interface AppState {
   currentTransit: TransitEvent | null;
   selectedDignity: DignityType | null;
   natalMode: boolean;
+  interpretationStyle: InterpretationStyle;
   zodiacSegmentCount: number;
   loading: boolean;
   ready: boolean;

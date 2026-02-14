@@ -102,3 +102,66 @@ describe('findCurrentTransit - fast-moving planets', () => {
     expect(durationDays).toBeLessThan(35);
   });
 });
+
+describe('findCurrentTransit - natal date vs today alignment', () => {
+  // The critical bug: transits must reflect the query date, not today's date.
+  // When viewing a natal chart for 1990-06-15, the Sun should be in Gemini
+  // (not whatever sign it's in today).
+
+  it('natal date 1990-06-15: Sun in Gemini, transit dates in 1990', () => {
+    const natalDate = new Date(Date.UTC(1990, 5, 15, 14, 30, 0)); // Jun 15 1990 14:30 UTC
+    const transit = findCurrentTransit('Sun', natalDate);
+
+    expect(SIGN_NAMES[transit.signIndex]).toBe('Gemini');
+    // Sun enters Gemini ~May 21 and leaves ~Jun 21
+    expect(transit.startDate.getFullYear()).toBe(1990);
+    expect(transit.endDate.getFullYear()).toBe(1990);
+    expectDateNear(transit.startDate, new Date(Date.UTC(1990, 4, 21)), 3);
+    expectDateNear(transit.endDate, new Date(Date.UTC(1990, 5, 21)), 3);
+  });
+
+  it('natal date 1990-06-15: Jupiter transit dates are in the early 1990s', () => {
+    const natalDate = new Date(Date.UTC(1990, 5, 15, 14, 30, 0));
+    const transit = findCurrentTransit('Jupiter', natalDate);
+
+    // Jupiter was in Cancer in mid-1990. Transit dates should be ~1989-1990.
+    expect(SIGN_NAMES[transit.signIndex]).toBe('Cancer');
+    // Start and end must NOT be in 2025/2026
+    expect(transit.startDate.getFullYear()).toBeLessThan(1991);
+    expect(transit.endDate.getFullYear()).toBeLessThan(1992);
+  });
+
+  it('different query dates produce different transit dates for fast planets', () => {
+    const today = new Date(Date.UTC(2025, 1, 13, 12, 0, 0)); // Feb 13 2025
+    const natal = new Date(Date.UTC(1990, 5, 15, 14, 30, 0)); // Jun 15 1990
+
+    const transitToday = findCurrentTransit('Sun', today);
+    const transitNatal = findCurrentTransit('Sun', natal);
+
+    // These must be different — the Sun is in different signs
+    expect(transitToday.signIndex).not.toBe(transitNatal.signIndex);
+    // Transit dates must differ by decades
+    const startDiffYears = Math.abs(
+      transitToday.startDate.getFullYear() - transitNatal.startDate.getFullYear()
+    );
+    expect(startDiffYears).toBeGreaterThan(30);
+  });
+
+  it('transit dates always bracket the query date', () => {
+    // For any planet and date, startDate <= queryDate <= endDate
+    const dates = [
+      new Date(Date.UTC(1990, 5, 15)),
+      new Date(Date.UTC(2000, 0, 1)),
+      new Date(Date.UTC(2025, 1, 13)),
+    ];
+    const planets = ['Sun', 'Mars', 'Jupiter', 'Saturn'] as const;
+
+    for (const date of dates) {
+      for (const planet of planets) {
+        const transit = findCurrentTransit(planet, date);
+        expect(transit.startDate.getTime()).toBeLessThanOrEqual(date.getTime());
+        expect(transit.endDate.getTime()).toBeGreaterThanOrEqual(date.getTime());
+      }
+    }
+  });
+});

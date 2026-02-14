@@ -24,6 +24,8 @@ export class App {
   private animLoop!: AnimationLoop;
   private infoPanel!: HTMLElement;
   private baseDate = new Date();
+  /** When true, the 1-second timer auto-updates to now. Disabled when user manually picks a date. */
+  private liveMode = true;
 
   constructor(private container: HTMLElement) {}
 
@@ -56,56 +58,75 @@ export class App {
     const overlay = createOverlay();
     canvasWrapper.appendChild(overlay);
 
-    // Top toolbar: date picker + city search in a single row
+    // Top toolbar: date picker + city search
     const toolbar = document.createElement('div');
+    toolbar.className = 'app-toolbar';
     toolbar.style.cssText = `
       position: absolute;
-      top: 12px; left: 12px;
+      top: 12px; left: 12px; right: 12px;
       pointer-events: auto;
       display: flex;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
+      flex-wrap: wrap;
       background: rgba(0,0,0,0.75);
       border: 1px solid rgba(255,255,255,0.15);
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 6px 8px;
       backdrop-filter: blur(8px);
     `;
 
     const datePicker = createDateTimePicker((date) => {
       this.baseDate = date;
+      this.liveMode = false;
       store.setState({ date });
     }, store.getState().date);
+    // Date picker takes remaining space in its row
+    datePicker.element.style.flex = '1 1 auto';
+    datePicker.element.style.minWidth = '0';
+    // Make the input inside fill its container
+    const dateInput = datePicker.element.querySelector('input') as HTMLInputElement;
+    if (dateInput) dateInput.style.width = '100%';
     toolbar.appendChild(datePicker.element);
 
     const citySearch = createCitySearch((lat, lng, tz) => {
-      store.setState({ latitude: lat, longitude: lng, timezone: tz });
+      // Restore user's intended date (timer may have overwritten it before natal mode activated)
+      store.setState({ date: this.baseDate, latitude: lat, longitude: lng, timezone: tz });
     });
+    // City search takes remaining space
+    citySearch.style.flex = '1 1 auto';
+    citySearch.style.minWidth = '0';
     toolbar.appendChild(citySearch);
 
-    // Natal mode indicator — shown when birth data is set
-    const natalBadge = document.createElement('span');
-    natalBadge.style.cssText = `
-      display: none;
-      font-size: 13px;
-      color: #ffcc66;
-      padding: 2px 8px;
-      border-left: 1px solid rgba(255,255,255,0.2);
-      white-space: nowrap;
-    `;
-    natalBadge.textContent = '\u{1F476} Natal';
-    toolbar.appendChild(natalBadge);
-
+    // Smuggle 👶 into city input placeholder when natal mode is active
+    const cityInput = citySearch.querySelector('input') as HTMLInputElement;
     store.subscribe('natalMode', (natal) => {
-      natalBadge.style.display = natal ? 'inline' : 'none';
+      if (!natal) {
+        cityInput.placeholder = '\u{1F50D} Search city...';
+      }
+      // When natal, the city name is already in the input value;
+      // the 👶 gets prepended to the displayed value
+    });
+    store.subscribe('latitude', () => {
+      const s = store.getState();
+      if (s.natalMode && cityInput.value && !cityInput.value.startsWith('\u{1F476}')) {
+        cityInput.value = '\u{1F476} ' + cityInput.value;
+      }
     });
 
     overlay.appendChild(toolbar);
 
     const timeScrubber = createTimeScrubber((days) => {
       const d = new Date(this.baseDate.getTime() + days * 86400000);
+      this.liveMode = false;
       datePicker.setDate(d);
       store.setState({ date: d });
+    }, () => {
+      // "Now" button: re-enable live mode and reset to current time
+      this.liveMode = true;
+      this.baseDate = new Date();
+      datePicker.setDate(this.baseDate);
+      store.setState({ date: this.baseDate, natalMode: false, houses: null, latitude: 0, longitude: 0 });
     });
     overlay.appendChild(timeScrubber);
 
@@ -132,16 +153,23 @@ export class App {
       updateInfoPanel(this.infoPanel, s);
     });
 
+    store.subscribe('interpretationStyle', () => {
+      updateInfoPanel(this.infoPanel, store.getState());
+    });
+
     // Initial calculation
     this.recalculate();
 
     // Start render loop
     this.animLoop.start();
 
-    // Auto-update every second (planets move, clock ticks)
+    // Auto-update every second (planets move, clock ticks) — only in live mode
     setInterval(() => {
-      if (!store.getState().natalMode) {
-        store.setState({ date: new Date() });
+      if (this.liveMode && !store.getState().natalMode) {
+        const now = new Date();
+        this.baseDate = now;
+        store.setState({ date: now });
+        datePicker.setDate(now);
       }
     }, 1000);
 
@@ -160,6 +188,21 @@ export class App {
     if (state.latitude !== 0 || state.longitude !== 0) {
       const houses = computeWholeSignHouses(state.date, state.latitude, state.longitude);
       store.setState({ houses, natalMode: true });
+    }
+
+    // Recalculate transit + dignity for the currently selected planet
+    const selected = store.getState().selectedObject;
+    if (selected?.type === 'planet') {
+      const planetId = selected.id as PlanetId;
+      const transit = findCurrentTransit(planetId, state.date);
+      const pos = positions.get(planetId);
+      const dignity = pos ? getDignity(planetId, pos.signIndex) : null;
+      store.setState({ currentTransit: transit, selectedDignity: dignity });
+    }
+
+    // Refresh info panel with latest state
+    if (this.infoPanel) {
+      updateInfoPanel(this.infoPanel, store.getState());
     }
   }
 
@@ -182,6 +225,7 @@ export class App {
   setDate(year: number, month: number, day: number, hour: number, minute: number): void {
     const d = new Date(year, month - 1, day, hour, minute);
     this.baseDate = d;
+    this.liveMode = false;
     store.setState({ date: d });
   }
 

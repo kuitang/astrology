@@ -1,5 +1,6 @@
 export function createTimeScrubber(
-  onScrub: (offsetDays: number) => void
+  onScrub: (offsetDays: number) => void,
+  onNow?: () => void,
 ): HTMLElement {
   const container = document.createElement('div');
   container.style.cssText = `
@@ -67,7 +68,11 @@ export function createTimeScrubber(
 
   todayBtn.addEventListener('click', () => {
     slider.value = '0';
-    onScrub(0);
+    if (onNow) {
+      onNow();
+    } else {
+      onScrub(0);
+    }
   });
 
   container.appendChild(minLabel);

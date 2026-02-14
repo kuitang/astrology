@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { eclipticToCartesian } from '../utils/math.js';
 
 export interface ConstellationData {
@@ -77,17 +80,26 @@ export function createConstellations(): THREE.Group {
   const circleTexture = createCircleTexture();
 
   // Shared materials for all constellations (avoid duplicate draw calls)
-  const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
+  // Line2 renders actual thick lines (WebGL THREE.Line is always 1px)
+  const lineMaterial = new LineMaterial({
+    color: 0xccbb88,
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.5,
+    linewidth: 1.5, // pixels in screen space
+    depthWrite: false, // Prevent depth conflicts with sprites
+    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+  });
+  // Keep resolution updated on resize
+  window.addEventListener('resize', () => {
+    lineMaterial.resolution.set(window.innerWidth, window.innerHeight);
   });
   const starSpriteMat = new THREE.SpriteMaterial({
     map: circleTexture,
     transparent: true,
-    opacity: 0.85,
-    color: 0xffffff,
+    opacity: 0.9,
+    color: 0xffeedd,
     sizeAttenuation: true,
+    depthWrite: false, // Prevent sprite transparent pixels from occluding line endpoints
   });
   const hitGeom = new THREE.SphereGeometry(7, 8, 8);
   const starHitGeom = new THREE.SphereGeometry(2.5, 6, 6);
@@ -95,6 +107,7 @@ export function createConstellations(): THREE.Group {
     transparent: true,
     opacity: 0,
     side: THREE.DoubleSide,
+    depthWrite: false, // Invisible — must not occlude visible objects
   });
 
   for (const con of ZODIAC_CONSTELLATIONS) {
@@ -107,20 +120,26 @@ export function createConstellations(): THREE.Group {
       ([lon, lat]) => starPos(lon, lat, r),
     );
 
-    // Stick figure lines — use the pre-computed positions
+    // Stick figure lines — use Line2 for visible thickness
+    // renderOrder 1 = draw after most objects but before sprites (2)
     for (const [i, j] of con.lines) {
       const pA = positions[i]!;
       const pB = positions[j]!;
-      const geom = new THREE.BufferGeometry().setFromPoints([pA, pB]);
-      const line = new THREE.Line(geom, lineMaterial);
+      const geom = new LineGeometry();
+      geom.setPositions([pA.x, pA.y, pA.z, pB.x, pB.y, pB.z]);
+      const line = new Line2(geom, lineMaterial);
+      line.computeLineDistances();
+      line.renderOrder = 1;
       group.add(line);
     }
 
     // Constellation stars as circle sprites — same pre-computed positions
+    // renderOrder 2 = draw on top of lines so star dots sit over line endpoints
     for (const pos of positions) {
       const sprite = new THREE.Sprite(starSpriteMat);
       sprite.position.copy(pos);
       sprite.scale.set(1.2, 1.2, 1);
+      sprite.renderOrder = 2;
       sprite.userData = { type: 'constellation', name: con.name };
       group.add(sprite);
 

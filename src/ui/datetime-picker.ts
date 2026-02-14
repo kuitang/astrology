@@ -24,17 +24,19 @@ export function createDateTimePicker(
   const input = document.createElement('input');
   input.type = 'text';
   input.dataset.testid = 'datetime-input';
+  input.className = 'toolbar-date-input';
   input.style.cssText = `
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 6px;
     color: #fff;
-    padding: 10px 12px;
+    padding: 0 10px;
     font-size: 14px;
-    min-height: 44px;
+    height: 36px;
     width: 190px;
     cursor: pointer;
     font-family: inherit;
+    box-sizing: border-box;
   `;
 
   container.appendChild(input);
@@ -82,12 +84,22 @@ export function createDateTimePicker(
     .flatpickr-current-month input.cur-year {
       color: #fff !important;
     }
+    .flatpickr-time {
+      background: rgba(10, 10, 20, 0.95) !important;
+      border-top: 1px solid rgba(255,255,255,0.15) !important;
+    }
     .flatpickr-time input, .flatpickr-time .flatpickr-am-pm {
       color: #fff !important;
       background: transparent !important;
     }
+    .flatpickr-time .flatpickr-am-pm:hover {
+      background: rgba(68, 136, 255, 0.2) !important;
+    }
     .flatpickr-time .flatpickr-time-separator {
       color: rgba(255,255,255,0.5) !important;
+    }
+    .flatpickr-time input:focus {
+      background: rgba(68, 136, 255, 0.15) !important;
     }
     .numInputWrapper span {
       border-color: rgba(255,255,255,0.2) !important;
@@ -98,15 +110,20 @@ export function createDateTimePicker(
     .numInputWrapper span svg path {
       fill: rgba(255,255,255,0.5) !important;
     }
+    .flatpickr-current-month .flatpickr-monthDropdown-months option {
+      background: #0a0a14 !important;
+      color: #fff !important;
+    }
   `;
   document.head.appendChild(style);
 
+  const isMobile = window.matchMedia('(max-width: 767px)').matches;
   let fp: FlatpickrInstance;
   fp = flatpickr(input, {
     defaultDate: initialDate,
     enableTime: true,
-    time_24hr: true,
-    dateFormat: 'Y-m-d H:i',
+    time_24hr: false,
+    dateFormat: isMobile ? 'M j, Y h:iK' : 'Y-m-d h:i K',
     onChange: (selectedDates) => {
       if (selectedDates[0]) {
         onChange(selectedDates[0]);

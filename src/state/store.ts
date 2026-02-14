@@ -20,6 +20,7 @@ class Store {
       currentTransit: null,
       selectedDignity: null,
       natalMode: false,
+      interpretationStyle: 'traditional',
       zodiacSegmentCount: 12,
       loading: true,
       ready: false,
