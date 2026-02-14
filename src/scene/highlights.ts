@@ -4,7 +4,7 @@ import { ZODIAC_SIGNS, ELEMENT_COLORS } from '../data/zodiac-signs.js';
 import { PLANET_MAP } from '../data/planet-metadata.js';
 import { degreesToRadians, eclipticToCartesian } from '../utils/math.js';
 
-const BELT_RADIUS = 25;
+const BELT_RADIUS = 28;
 const SECTOR_OPACITY = 0.12;
 
 export class HighlightSystem {

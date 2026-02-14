@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import type { HouseCusps } from '../types/astro.js';
 import { degreesToRadians } from '../utils/math.js';
 
-const HOUSE_LINE_RADIUS = 28;
-const BELT_RADIUS = 25;
+const HOUSE_LINE_RADIUS = 32;
+const BELT_RADIUS = 28;
 
 export class HouseVisuals {
   group: THREE.Group;

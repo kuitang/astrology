@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { degreesToRadians } from '../utils/math.js';
+import { eclipticToCartesian } from '../utils/math.js';
 
 export interface ConstellationData {
   name: string;
@@ -23,12 +23,12 @@ import { ZODIAC_CONSTELLATIONS_GENERATED } from './constellation-data.generated.
 export const ZODIAC_CONSTELLATIONS: ConstellationData[] = ZODIAC_CONSTELLATIONS_GENERATED;
 
 /** Map distanceLy to a display radius using log scale.
- *  Closest constellations (~50 ly) → radius 24
- *  Farthest constellations (~550 ly) → radius 34
- *  This preserves distance ordering while keeping all visible. */
+ *  Closest constellations (~50 ly) → radius 42
+ *  Farthest constellations (~550 ly) → radius 55
+ *  This puts constellations in the outermost annulus, well beyond the sign belt (28). */
 function constellationRadius(distanceLy: number): number {
-  const minR = 24;
-  const maxR = 34;
+  const minR = 42;
+  const maxR = 55;
   const minD = Math.log(40);   // ~40 ly floor
   const maxD = Math.log(600);  // ~600 ly ceiling
   const t = (Math.log(Math.max(40, distanceLy)) - minD) / (maxD - minD);
@@ -62,14 +62,12 @@ function createCircleTexture(): THREE.Texture {
   return new THREE.CanvasTexture(canvas);
 }
 
+/** Convert ecliptic longitude/latitude to a 3D position on the constellation sphere.
+ *  Delegates to the shared eclipticToCartesian utility so the projection math
+ *  (lon/lat on a sphere) is defined in exactly one place. */
 function starPos(lon: number, lat: number, r: number): THREE.Vector3 {
-  const lonRad = degreesToRadians(lon);
-  const latRad = degreesToRadians(lat);
-  return new THREE.Vector3(
-    r * Math.cos(latRad) * Math.cos(lonRad),
-    r * Math.sin(latRad),
-    -r * Math.cos(latRad) * Math.sin(lonRad)
-  );
+  const [x, y, z] = eclipticToCartesian(lon, lat, r);
+  return new THREE.Vector3(x, y, z);
 }
 
 export function createConstellations(): THREE.Group {
@@ -91,7 +89,8 @@ export function createConstellations(): THREE.Group {
     color: 0xffffff,
     sizeAttenuation: true,
   });
-  const hitGeom = new THREE.SphereGeometry(5, 8, 8);
+  const hitGeom = new THREE.SphereGeometry(7, 8, 8);
+  const starHitGeom = new THREE.SphereGeometry(2.5, 6, 6);
   const hitMat = new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0,
@@ -101,24 +100,35 @@ export function createConstellations(): THREE.Group {
   for (const con of ZODIAC_CONSTELLATIONS) {
     const r = constellationRadius(con.distanceLy);
 
-    // Stick figure lines
+    // Pre-compute all star positions once so lines and sprites share
+    // the exact same Vector3 coordinates (avoids Float64→Float32 drift
+    // when BufferGeometry.setFromPoints converts to a Float32Array).
+    const positions: THREE.Vector3[] = con.stars.map(
+      ([lon, lat]) => starPos(lon, lat, r),
+    );
+
+    // Stick figure lines — use the pre-computed positions
     for (const [i, j] of con.lines) {
-      const starA = con.stars[i]!;
-      const starB = con.stars[j]!;
-      const pA = starPos(starA[0], starA[1], r);
-      const pB = starPos(starB[0], starB[1], r);
+      const pA = positions[i]!;
+      const pB = positions[j]!;
       const geom = new THREE.BufferGeometry().setFromPoints([pA, pB]);
       const line = new THREE.Line(geom, lineMaterial);
       group.add(line);
     }
 
-    // Constellation stars as circle sprites (shared material)
-    for (const [lon, lat] of con.stars) {
-      const pos = starPos(lon, lat, r);
+    // Constellation stars as circle sprites — same pre-computed positions
+    for (const pos of positions) {
       const sprite = new THREE.Sprite(starSpriteMat);
       sprite.position.copy(pos);
-      sprite.scale.set(0.8, 0.8, 1);
+      sprite.scale.set(1.2, 1.2, 1);
+      sprite.userData = { type: 'constellation', name: con.name };
       group.add(sprite);
+
+      // Per-star invisible hit sphere for better touch targets
+      const starHit = new THREE.Mesh(starHitGeom, hitMat);
+      starHit.position.copy(pos);
+      starHit.userData = { type: 'constellation', name: con.name };
+      group.add(starHit);
     }
 
     // Invisible click target (shared geometry and material)

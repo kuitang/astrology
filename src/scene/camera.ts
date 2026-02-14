@@ -2,13 +2,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export function createCamera(container: HTMLElement): THREE.PerspectiveCamera {
-  const aspect = container.clientWidth / container.clientHeight;
+  // Use canvas wrapper if it exists (created by renderer), else fall back to container
+  const sizeSource = () => document.getElementById('canvas-wrapper') ?? container;
+  const el = sizeSource();
+  const aspect = el.clientWidth / el.clientHeight;
   const camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
   camera.position.set(0, 25, 50);
   camera.lookAt(0, 0, 0);
 
   const onResize = () => {
-    camera.aspect = container.clientWidth / container.clientHeight;
+    const s = sizeSource();
+    camera.aspect = s.clientWidth / s.clientHeight;
     camera.updateProjectionMatrix();
   };
   window.addEventListener('resize', onResize);
@@ -21,7 +25,7 @@ export function createControls(camera: THREE.PerspectiveCamera, domElement: HTML
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.minDistance = 5;
-  controls.maxDistance = 100;
+  controls.maxDistance = 150;
   controls.enablePan = false;
   controls.touches = {
     ONE: THREE.TOUCH.ROTATE,

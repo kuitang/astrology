@@ -20,7 +20,7 @@ export function showWelcomeInPanel(panel: HTMLElement): void {
   panel.innerHTML = `
     <div style="font-size:18px;font-weight:bold;margin-bottom:14px;">Current position of the stars</div>
     <div style="font-size:14px;color:#ccc;margin-bottom:12px;line-height:1.6;">
-      Tap a planet or a sign to get started.
+      Tap a planet or a sign to see what is happening now.
     </div>
     <div style="font-size:14px;color:#ccc;line-height:1.6;">
       Set your birthday, time, and city to see the stars at the moment you were born.

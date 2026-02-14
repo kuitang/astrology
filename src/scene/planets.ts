@@ -89,7 +89,7 @@ export class PlanetVisuals {
       const material = new THREE.MeshStandardMaterial({
         map: texture,
         emissive: shouldGlow ? meta.color : 0x000000,
-        emissiveIntensity: meta.id === 'Sun' ? 1.0 : meta.id === 'Moon' ? 0.4 : 0,
+        emissiveIntensity: meta.id === 'Sun' ? 1.0 : meta.id === 'Moon' ? 0.8 : 0,
         roughness: 0.6,
       });
       const mesh = new THREE.Mesh(geometry, material);
@@ -98,10 +98,24 @@ export class PlanetVisuals {
       this.meshes.set(meta.id, mesh);
       this.group.add(mesh);
 
-      // Invisible hit cylinder from planet radius out toward the belt (radius 25)
+      // Try to load real texture (gracefully degrade to procedural if not found)
+      const loader = new THREE.TextureLoader();
+      loader.load(
+        import.meta.env.BASE_URL + 'textures/planets/' + meta.id.toLowerCase() + '.jpg',
+        (realTexture) => {
+          material.map = realTexture;
+          material.needsUpdate = true;
+        },
+        undefined,
+        () => {
+          // Texture not found — keep procedural look
+        }
+      );
+
+      // Invisible hit cylinder from planet radius out toward the belt (radius 28)
       // Stops before the belt to avoid blocking constellation clicks behind it
       const hitRadius = 1.5;
-      const hitLength = Math.max(2, 24 - meta.orbitRadius);
+      const hitLength = Math.max(2, 27 - meta.orbitRadius);
       const hitGeom = new THREE.CylinderGeometry(hitRadius, hitRadius, hitLength, 8);
       hitGeom.rotateZ(Math.PI / 2);
       const hitMat = new THREE.MeshBasicMaterial({
@@ -186,7 +200,7 @@ export class PlanetVisuals {
       // Position hit cylinder from planet outward along the radial direction
       const hitCyl = this.hitCylinders.get(id);
       if (hitCyl) {
-        const midRadius = (meta.orbitRadius + 24) / 2;
+        const midRadius = (meta.orbitRadius + 27) / 2;
         const [mx, my, mz] = eclipticToCartesian(pos.longitude, pos.latitude, midRadius);
         hitCyl.position.set(mx, my, mz);
         _tempDir.set(x, y, z).normalize();

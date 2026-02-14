@@ -43,6 +43,27 @@ export function buildScene(): SceneComponents {
   eclipticGroup.rotation.x = degreesToRadians(OBLIQUITY);
   scene.add(eclipticGroup);
 
+  // ── Three annulus rings (thin torus geometry) to delineate layers ──
+  // Inner ring: planet orbit boundary (outermost planet Pluto at r=24)
+  const planetRingGeom = new THREE.TorusGeometry(25, 0.06, 8, 128);
+  planetRingGeom.rotateX(Math.PI / 2);
+  const planetRing = new THREE.Mesh(planetRingGeom, new THREE.MeshBasicMaterial({
+    color: 0x334455, transparent: true, opacity: 0.25,
+  }));
+  planetRing.name = 'planetAnnulus';
+  eclipticGroup.add(planetRing);
+
+  // Middle ring: zodiac sign belt (r=28) — handled by zodiac-belt's ecliptic line
+
+  // Outer ring: constellation zone inner boundary (r=40)
+  const constellationRingGeom = new THREE.TorusGeometry(40, 0.06, 8, 180);
+  constellationRingGeom.rotateX(Math.PI / 2);
+  const constellationRing = new THREE.Mesh(constellationRingGeom, new THREE.MeshBasicMaterial({
+    color: 0x222244, transparent: true, opacity: 0.2,
+  }));
+  constellationRing.name = 'constellationAnnulus';
+  eclipticGroup.add(constellationRing);
+
   // Zodiac belt
   const zodiacBelt = createZodiacBelt();
   eclipticGroup.add(zodiacBelt);

@@ -19,7 +19,7 @@ export function createComposer(
     new THREE.Vector2(size.x, size.y),
     0.4,   // strength (lower = less glow)
     0.3,   // radius
-    0.95   // threshold (high = only very bright objects glow, i.e. Sun)
+    0.8    // threshold — luminaries (Sun + Moon) bloom
   );
   composer.addPass(bloomPass);
 

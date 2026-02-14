@@ -51,9 +51,10 @@ export class App {
       polarisGroup,
     ]);
 
-    // UI
+    // UI — overlay goes inside canvas-wrapper so it doesn't cover the info panel
+    const canvasWrapper = document.getElementById('canvas-wrapper')!;
     const overlay = createOverlay();
-    this.container.appendChild(overlay);
+    canvasWrapper.appendChild(overlay);
 
     // Top toolbar: date picker + city search in a single row
     const toolbar = document.createElement('div');
@@ -81,6 +82,23 @@ export class App {
       store.setState({ latitude: lat, longitude: lng, timezone: tz });
     });
     toolbar.appendChild(citySearch);
+
+    // Natal mode indicator — shown when birth data is set
+    const natalBadge = document.createElement('span');
+    natalBadge.style.cssText = `
+      display: none;
+      font-size: 13px;
+      color: #ffcc66;
+      padding: 2px 8px;
+      border-left: 1px solid rgba(255,255,255,0.2);
+      white-space: nowrap;
+    `;
+    natalBadge.textContent = '\u{1F476} Natal';
+    toolbar.appendChild(natalBadge);
+
+    store.subscribe('natalMode', (natal) => {
+      natalBadge.style.display = natal ? 'inline' : 'none';
+    });
 
     overlay.appendChild(toolbar);
 
